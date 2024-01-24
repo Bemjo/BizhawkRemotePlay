@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "BizhawkRemotePlay": {
+      "commandName": "Executable",
+      "executablePath": "C:\\Users\\Ben\\source\\repos\\BizhawkRemotePlay\\BizHawk\\EmuHawk.exe",
+      "commandLineArgs": "--open-ext-tool-dll=BizhawkRemotePlay",
+      "workingDirectory": "C:\\Users\\Ben\\source\\repos\\BizhawkRemotePlay\\BizHawk"
+    }
+  }
+}

@@ -1,0 +1,53 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<LangVersion>10.0</LangVersion>
+		<Nullable>enable</Nullable>
+		<TargetFramework>net48</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <RootNamespace>BizhawkRemotePlay</RootNamespace>
+    <AssemblyName>BizhawkRemotePlay</AssemblyName>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+	  <DefineConstants>DEBUG;TRACE</DefineConstants>
+	</PropertyGroup>
+  <PropertyGroup Condition=" '$(BIZHAWK_DATA_HOME)' == '' ">
+    <BIZHAWK_DATA_HOME>$(ProjectDir)../BizHawk/</BIZHAWK_DATA_HOME>
+    <!-- if building EmuHawk from source, point to $(ProjectDir)../BizHawk/output/ -->
+  </PropertyGroup>
+	<ItemGroup>
+	  <Compile Remove="Network.cs" />
+	</ItemGroup>
+	<ItemGroup>
+	  <PackageReference Include="Discord.Net" Version="3.13.0" />
+	  <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+	</ItemGroup>
+	<ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+    <PackageReference Include="Nito.AsyncEx.Context" Version="5.1.2" />
+    <PackageReference Include="System.Collections.Immutable" Version="8.0.0" />
+    <PackageReference Include="System.Memory" Version="4.5.5" />
+    <PackageReference Include="TwitchLib.Client" Version="3.3.1" />
+    <Reference Include="BizHawk.Bizware.BizwareGL">
+      <HintPath>..\..\BizhawkRandomizeInputs\BizHawk\dll\BizHawk.Bizware.BizwareGL.dll</HintPath>
+    </Reference>
+    <Reference Include="BizHawk.Bizware.DirectX">
+      <HintPath>..\..\BizhawkRandomizeInputs\BizHawk\dll\BizHawk.Bizware.DirectX.dll</HintPath>
+    </Reference>
+    <Reference Include="BizHawk.Bizware.OpenTK3">
+      <HintPath>..\..\BizhawkRandomizeInputs\BizHawk\dll\BizHawk.Bizware.OpenTK3.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="BizHawk.Client.Common" HintPath="$(BIZHAWK_DATA_HOME)dll/BizHawk.Client.Common.dll" />
+    <Reference Include="BizHawk.Client.EmuHawk" HintPath="$(BIZHAWK_DATA_HOME)EmuHawk.exe" />
+    <Reference Include="BizHawk.Common" HintPath="$(BIZHAWK_DATA_HOME)dll/BizHawk.Common.dll" />
+		<Reference Include="BizHawk.Emulation.Common">
+		  <HintPath>$(BIZHAWK_DATA_HOME)dll\BizHawk.Emulation.Common.dll</HintPath>
+		</Reference>
+		<Reference Include="BizHawk.WinForms.Controls" HintPath="$(BIZHAWK_DATA_HOME)dll/BizHawk.WinForms.Controls.dll" />
+	</ItemGroup>
+
+	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
+		<Copy SourceFiles="$(OutputPath)$(MSBuildProjectName).dll" DestinationFolder="$(BIZHAWK_DATA_HOME)ExternalTools" />
+	</Target>
+</Project>

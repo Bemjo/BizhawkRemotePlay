@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Windows.Forms;
 using BizHawk.Client.Common;
 using BizHawk.Client.EmuHawk;
 using BizHawk.WinForms.Controls;
@@ -137,7 +138,6 @@ namespace BizhawkRemotePlay
 
 		private InputProvidersForm servicesForm;
 		public RemotePlayConfig configFile;
-		private ServiceKeys keys;
 
         // Actual system FPS to calculate times from and from frame counts accurately 
         public static readonly IReadOnlyDictionary<string, double> SystemFrameRates = new Dictionary<string, double>()
@@ -191,8 +191,6 @@ namespace BizhawkRemotePlay
 			InitializeComponent();
             configFile = LoadConfigFile<RemotePlayConfig>(ConfigFilePath);
 
-			keys = ReloadKeys();
-
             systemState = new State(false,
                 configFile.MaxReps,
                 configFile.MaxActFrames,
@@ -205,19 +203,12 @@ namespace BizhawkRemotePlay
 
             decoder = new StringDecoder(systemState);
 
-			TwitchService ts = new TwitchService(this, keys);
-            DiscordService ds = new DiscordService(this, keys);
+			TwitchService ts = new TwitchService(this);
+            DiscordService ds = new DiscordService(this);
 
 			servicesForm = new InputProvidersForm(this, new IService[]{ ts, ds });
 
 			servicesForm.InitializeConnections();
-        }
-
-
-
-		public ServiceKeys ReloadKeys()
-		{
-           return LoadConfigFile<ServiceKeys>(configFile.KeysFilePath);
         }
 
 

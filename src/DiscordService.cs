@@ -12,13 +12,11 @@ namespace BizhawkRemotePlay
     public class DiscordService : ServiceBase
     {
         private DiscordSocketClient discordClient;
-
+        public string Token = string.Empty;
         public HashSet<ulong> listenChannels = new HashSet<ulong>();
-        private ServiceKeys keys;
         AsyncContextThread contextThread = new AsyncContextThread();
 
-
-        public DiscordService(IRemotePlayer player, ServiceKeys keys) : base(player)
+        public DiscordService(IRemotePlayer player) : base(player)
         {
             discordClient = new DiscordSocketClient(new DiscordSocketConfig()
             {
@@ -30,7 +28,6 @@ namespace BizhawkRemotePlay
             discordClient.Connected += discordClient_Connected;
             discordClient.Disconnected += discordClient_Disconnected;
             discordClient.MessageReceived += discordClient_MessageReceived;
-            this.keys = keys;
         }
 
 
@@ -102,13 +99,19 @@ namespace BizhawkRemotePlay
 
 
 
-        public override void Connect()
+        public override bool Connect()
         {
+            if (Token.Length <= 0)
+                return false;
+
             contextThread.Factory.Run(async Task () =>
             {
-                await discordClient.LoginAsync(Discord.TokenType.Bot, keys.DiscordToken);
+                await discordClient.LoginAsync(Discord.TokenType.Bot, Token);
                 await discordClient.StartAsync();
             });
+
+            return true;
+
         }
 
         public override void Disconnect()

@@ -24,7 +24,7 @@ namespace BizhawkRemotePlay
         {
             InitializeComponent();
             _player = player;
-            textBox_KeysFilePath.Text = _player.configFile.KeysFilePath;
+
             checkBox_AutoConnectTwitch.Checked = _player.configFile.AutoLoginTwitch;
             checkBox_AutoConnectDiscord.Checked = _player.configFile.AutoLoginDiscord;
 
@@ -35,10 +35,13 @@ namespace BizhawkRemotePlay
                     if (service is TwitchService ts)
                     {
                         SetTwitchService(ts);
+                        textBoxUsername.Text = _player.configFile.TwitchUsername;
+                        textBoxOAuth.Text = _player.configFile.TwitchToken;
                     }
                     else if (service is DiscordService ds)
                     {
                         SetDiscordService(ds);
+                        textBoxDiscordToken.Text = _player.configFile.DiscordToken;
                     }
                 }
             }
@@ -186,17 +189,23 @@ namespace BizhawkRemotePlay
         {
             if (twitchService != null && !Disposing)
             {
-                if (Visible)
-                {
-                    Invoke(new MethodInvoker(delegate ()
-                    {
-                        button_ConnectTwitch.Text = "Connecting...";
-                        button_ConnectTwitch.Enabled = false;
+                twitchService.Username = textBoxUsername.Text;
+                twitchService.OAuth = textBoxOAuth.Text;
 
-                    }));
+                if (twitchService.Connect())
+                {
+                    if (Visible)
+                    {
+                        Invoke(new MethodInvoker(delegate ()
+                        {
+                            button_ConnectTwitch.Text = "Connecting...";
+                            button_ConnectTwitch.Enabled = false;
+
+                        }));
+                    }
+
+                    connectedToTwitch = ConnectionState.Connecting;
                 }
-                twitchService.Connect();
-                connectedToTwitch = ConnectionState.Connecting;
             }
         }
 
@@ -206,17 +215,20 @@ namespace BizhawkRemotePlay
         {
             if (discordService != null && !Disposing)
             {
-                if (Visible)
+                discordService.Token = textBoxDiscordToken.Text;
+
+                if (discordService.Connect())
                 {
-                    Invoke(new MethodInvoker(delegate ()
+                    if (Visible)
                     {
-                        button_ConnectDiscord.Text = "Connecting...";
-                        button_ConnectDiscord.Enabled = false;
-                    }));
+                        Invoke(new MethodInvoker(delegate ()
+                        {
+                            button_ConnectDiscord.Text = "Connecting...";
+                            button_ConnectDiscord.Enabled = false;
+                        }));
+                    }
+                    connectedToDiscord = ConnectionState.Connecting;
                 }
-                //discordService.ConnectAsync().Wait();
-                discordService.Connect();
-                connectedToDiscord = ConnectionState.Connecting;
             }
         }
 
@@ -282,7 +294,6 @@ namespace BizhawkRemotePlay
             else if (discordService != null)
             {
                 button_ConnectDiscord.Enabled = false;
-                //discordService.DisconnectAsync().Wait();
                 discordService.Disconnect();
             }
         }
@@ -358,28 +369,6 @@ namespace BizhawkRemotePlay
 
 
 
-        private void button_TwitchAuthFile_Click(object sender, EventArgs e)
-        {
-            using (OpenFileDialog openFileDialog = new OpenFileDialog())
-            {
-                openFileDialog.InitialDirectory = "c:\\";
-                openFileDialog.Filter = "All files (*.*)|*.*";
-                openFileDialog.FilterIndex = 1;
-                openFileDialog.RestoreDirectory = true;
-
-                if (openFileDialog.ShowDialog() == DialogResult.OK)
-                {
-                    string fileName = openFileDialog.FileName;
-
-                    _player.configFile.KeysFilePath = fileName;
-                    textBox_KeysFilePath.Text = fileName;
-
-                    _player.ReloadKeys();
-                }
-            }
-        }
-
-
         private string GetButtonString(ConnectionState state)
         {
             switch (state)
@@ -402,6 +391,27 @@ namespace BizhawkRemotePlay
 
             button_ConnectDiscord.Enabled = connectedToDiscord != ConnectionState.Connecting;
             button_ConnectTwitch.Enabled = connectedToTwitch != ConnectionState.Connecting;
+        }
+
+
+
+        private void textBoxDiscordToken_TextChanged(object sender, EventArgs e)
+        {
+            _player.configFile.DiscordToken = textBoxDiscordToken.Text;
+        }
+
+
+
+        private void textBoxUsername_TextChanged(object sender, EventArgs e)
+        {
+            _player.configFile.TwitchUsername = textBoxUsername.Text;
+        }
+
+
+
+        private void textBoxOAuth_TextChanged(object sender, EventArgs e)
+        {
+            _player.configFile.TwitchToken = textBoxOAuth.Text;
         }
     }
 }

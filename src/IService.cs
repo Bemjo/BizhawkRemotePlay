@@ -10,7 +10,7 @@ namespace BizhawkRemotePlay
     /// </summary>
     public interface IService
     {
-        void Connect();
+        bool Connect();
         void Disconnect();
     }
 
@@ -50,12 +50,12 @@ namespace BizhawkRemotePlay
         /// <summary>
         /// Synchronous Connection
         /// </summary>
-        public virtual void Connect() { _OnConnected(); }
+        public virtual bool Connect() { return false; }
 
         /// <summary>
         /// Synchronos Disconnection
         /// </summary>
-        public virtual void Disconnect() { _OnDisconnected(); }
+        public virtual void Disconnect() { }
 
         protected void _OnConnected() { OnConnected?.Invoke(); }
         protected void _OnDisconnected() { OnDisconnected?.Invoke(); }

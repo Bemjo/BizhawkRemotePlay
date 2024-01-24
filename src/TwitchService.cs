@@ -13,14 +13,14 @@ namespace BizhawkRemotePlay
 {
     public class TwitchService : ServiceBase
     {
+        public string Username { get; set; }
+        public string OAuth { get; set; }
+
         private TwitchClient twitch_client;
 
         private HashSet<string> channels = new HashSet<string>();
-        private ServiceKeys keys;
 
-
-
-        public TwitchService(IRemotePlayer player, ServiceKeys keys) : base(player)
+        public TwitchService(IRemotePlayer player) : base(player)
         {
             twitch_client = new TwitchClient(new WebSocketClient(new ClientOptions
             {
@@ -35,7 +35,6 @@ namespace BizhawkRemotePlay
             twitch_client.OnConnected += Twitch_client_OnConnected;
             twitch_client.OnDisconnected += Twitch_client_OnDisconnected;
             twitch_client.OnConnectionError += Twitch_client_OnConnectionError;
-            this.keys = keys;
         }
 
 
@@ -47,14 +46,16 @@ namespace BizhawkRemotePlay
 
 
 
-        public override void Connect()
+        public override bool Connect()
         {
-            if (twitch_client == null)
-                return;
+            if (twitch_client == null || Username.Length <= 0 || OAuth.Length <= 0)
+                return false;
 
-            twitch_client.Initialize(new ConnectionCredentials(keys.TwitchUsername, keys.TwitchToken));
+            twitch_client.Initialize(new ConnectionCredentials(Username, OAuth));
             twitch_client.AutoReListenOnException = true;
             twitch_client.Connect();
+
+            return true;
         }
 
 

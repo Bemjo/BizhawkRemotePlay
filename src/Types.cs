@@ -5,18 +5,8 @@ using System.Collections.Generic;
 
 namespace BizhawkRemotePlay
 {
-    public class ServiceKeys
-    {
-        public string TwitchUsername = string.Empty;
-        public string TwitchToken = string.Empty;
-        public string DiscordToken = string.Empty;
-    }
-
-
-
     public class RemotePlayConfig
     {
-        public string KeysFilePath = string.Empty;
 		public bool AutoLoginTwitch = false;
         public bool AutoLoginDiscord = false;
         public List<string> TwitchChannels = new List<string>();
@@ -33,6 +23,10 @@ namespace BizhawkRemotePlay
 		public bool QueueSequences = true;
 
 		public string ClearCommand = "!rpclear";
+
+        public string TwitchUsername = string.Empty;
+        public string TwitchToken = string.Empty;
+        public string DiscordToken = string.Empty;
     }
 
 

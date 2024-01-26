@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Discord.Commands;
 using Discord.WebSocket;
@@ -15,6 +14,8 @@ namespace BizhawkRemotePlay
         public string Token = string.Empty;
         public HashSet<ulong> listenChannels = new HashSet<ulong>();
         AsyncContextThread contextThread = new AsyncContextThread();
+
+
 
         public DiscordService(IRemotePlayer player) : base(player)
         {
@@ -46,11 +47,11 @@ namespace BizhawkRemotePlay
         {
             if (message.Exception is Exception ex)
             {
-                Console.WriteLine(ex);
+                Utility.WriteLine(ex);
             }
             else
             {
-                Console.WriteLine($"[General/{message.Severity}] {message}");
+                Utility.WriteLine($"[General/{message.Severity}] {message}");
             }
 
             return Task.CompletedTask;
@@ -62,8 +63,11 @@ namespace BizhawkRemotePlay
         {
             if (listenChannels.Contains(message.Channel.Id))
             {
-                ProcessMessage(message.CleanContent);
+                string content = message.CleanContent;
+                Utility.WriteLine(content);
+                ProcessMessage(content);
             }
+
             return Task.CompletedTask;
         }
 
@@ -102,7 +106,9 @@ namespace BizhawkRemotePlay
         public override bool Connect()
         {
             if (Token.Length <= 0)
+            {
                 return false;
+            }
 
             contextThread.Factory.Run(async Task () =>
             {
@@ -111,8 +117,9 @@ namespace BizhawkRemotePlay
             });
 
             return true;
-
         }
+
+
 
         public override void Disconnect()
         {

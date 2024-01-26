@@ -9,7 +9,9 @@ namespace BizhawkRemotePlay
 		{
 			switch (system)
 			{
-				case "NES":
+                case "GB":
+                case "GBC":
+                case "NES":
 					return new HashSet<string>()
 					{
 						{"A"},
@@ -70,20 +72,21 @@ namespace BizhawkRemotePlay
                         {"Rightstick Right"},
                     };
 
-                case "GB":
-				case "GBC":
-					return new HashSet<string>()
-					{
-						{"A"},
-						{"B"},
-						{"Up"},
-						{"Down"},
-						{"Left"},
-						{"Right"},
-						{"Start"},
-						{"Select"},
-					};
-			}
+                case "GBA":
+                    return new HashSet<string>()
+                    {
+                        {"A"},
+                        {"B"},
+                        {"L"},
+                        {"R"},
+                        {"Up"},
+                        {"Down"},
+                        {"Left"},
+                        {"Right"},
+                        {"Start"},
+                        {"Select"},
+                    };
+            }
 
 			return new HashSet<string>();
 		}
@@ -196,10 +199,20 @@ namespace BizhawkRemotePlay
             return $"[RemotePlay] {DateTime.UtcNow}: {msg}";
         }
 
+        private static string FormatMsg(Exception ex)
+        {
+            return $"[RemotePlay] {DateTime.UtcNow}: {ex}";
+        }
+
 
         public static void WriteLine(string msg)
         {
             Console.WriteLine(FormatMsg(msg));
+        }
+
+        public static void WriteLine(Exception ex)
+        {
+            Console.WriteLine(FormatMsg(ex));
         }
 
         public static void Write(string msg)

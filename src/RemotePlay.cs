@@ -139,6 +139,8 @@ namespace BizhawkRemotePlay
 		private InputProvidersForm servicesForm;
 		public RemotePlayConfig configFile;
 
+		public int? PadID { get; private set; } = null;
+
         // Actual system FPS to calculate times from and from frame counts accurately 
         public static readonly IReadOnlyDictionary<string, double> SystemFrameRates = new Dictionary<string, double>()
 		{
@@ -244,7 +246,7 @@ namespace BizhawkRemotePlay
 
 
 
-        private bool CoreSupportsInput(int padId)
+        private bool CoreSupportsInput(int? padId)
 		{
 			var btns = APIs.Joypad.Get(padId);
 
@@ -318,7 +320,7 @@ namespace BizhawkRemotePlay
 #if DEBUG
 			Utility.WriteLine($"Pressing buttons on frame: {totalFrames}");
 #endif
-			var sequenceStart = totalFrames;
+			ulong sequenceStart = totalFrames;
 			
 			foreach (var seq in sequence)
             {
@@ -326,13 +328,13 @@ namespace BizhawkRemotePlay
 
 				sequenceStart += seq.CommandDelay;
 
-				foreach (var btns in seq.Buttons)
+				foreach (ButtonCommand btns in seq.Buttons)
                 {
-					var delta = btns.Duration + btns.Reps.Delay;
-					var startFrame = sequenceStart - delta;
-					var endFrame = btns.Duration + sequenceStart - delta;
+					uint delta = btns.Duration + btns.Reps.Delay;
+					ulong startFrame = sequenceStart - delta;
+                    ulong endFrame = btns.Duration + sequenceStart - delta;
 
-					for (int i = 1; i <= btns.Reps.Reps; ++i)
+					for (uint i = 1; i <= btns.Reps.Reps; ++i)
 					{
 						startFrame += delta;
 						endFrame += delta;
@@ -340,6 +342,7 @@ namespace BizhawkRemotePlay
 						if (frameButtonStates.ContainsKey(startFrame))
 						{
 							var d = frameButtonStates[startFrame];
+
 							if (d.ContainsKey(btns.Button))
                             {
 								d[btns.Button] = true;
@@ -357,6 +360,7 @@ namespace BizhawkRemotePlay
 						if (frameButtonStates.ContainsKey(endFrame))
 						{
 							var d = frameButtonStates[endFrame];
+
 							if (d.ContainsKey(btns.Button))
 							{
 								d[btns.Button] = false;
@@ -388,18 +392,27 @@ namespace BizhawkRemotePlay
         {
 			var gameInfo = APIs.Emulation.GetGameInfo();
 
-			if (gameInfo != null && gameInfo.System.CompareTo("NULL") != 0)
+			if (gameInfo != null && gameInfo.System.Length > 0 && gameInfo.System.CompareTo("NULL") != 0)
 			{
 				systemState.CurrentSystem = gameInfo.System;
 				pressedButtons = Utility.CreateSystemJoypad(systemState.CurrentSystem);
 
-				systemState.SupportsInput = CoreSupportsInput(1);
+                systemState.SupportsInput = CoreSupportsInput(PadID);
 
+                if (!systemState.SupportsInput)
+                {
+					PadID = 0;
+                    systemState.SupportsInput = CoreSupportsInput(PadID);
+                }
 				if (!systemState.SupportsInput)
-                    systemState.SupportsInput = CoreSupportsInput(0);
-
+				{
+					PadID = 1;
+                    systemState.SupportsInput = CoreSupportsInput(PadID);
+				}
 				if (!systemState.SupportsInput)
+				{
 					Utility.WriteLine("Current System core does NOT support input manipulation, this plugin will not function. Please use a different core if possible.");
+				}
 
                 totalFrames = 0;
 
@@ -433,7 +446,9 @@ namespace BizhawkRemotePlay
 		{
 			// Just don't bother if the joypad functions aren't going to work
 			if (!systemState.SupportsInput)
+			{
 				return;
+			}
 			
 			// Change button states that are queued to be changed this frame
 			if (frameButtonStates.TryGetValue(totalFrames, out Dictionary<string, bool> frameStateChange))
@@ -444,7 +459,7 @@ namespace BizhawkRemotePlay
                 }
 			}
 
-			APIs.Joypad.Set(pressedButtons, 1);
+			APIs.Joypad.Set(pressedButtons, PadID);
 		}
 
 
@@ -459,7 +474,9 @@ namespace BizhawkRemotePlay
         protected override void UpdateAfter()
         {
 			if (!systemState.SupportsInput)
+			{
 				return;
+			}
 
 			frameButtonStates.Remove(totalFrames);
 			totalFrames++;
@@ -474,9 +491,9 @@ namespace BizhawkRemotePlay
 
 		private void UIRecalculateTimeLabels()
         {
-			maximumActionTime_ValueChanged(null, null);
-			holdFramesDefault_ValueChanged(null, null);
-			pressFramesDefault_ValueChanged(null, null);
+			maximumActionTime_ValueChanged(null!, null!);
+			holdFramesDefault_ValueChanged(null!, null!);
+			pressFramesDefault_ValueChanged(null!, null!);
 		}
 
 
@@ -563,13 +580,14 @@ namespace BizhawkRemotePlay
         {
 			string text = string.Empty;
 
+			Utility.WriteLine($"Loading Config File {path}");
+
             try
 			{
-				text = File.ReadAllText(path);
-				
+                
+                text = File.ReadAllText(path);
             }
-            catch
-            { }
+            catch { }
 
             return JsonConvert.DeserializeObject<T>(text) ?? new T();
         }
@@ -580,7 +598,9 @@ namespace BizhawkRemotePlay
         {
 			var serializer = new JsonSerializer() { Formatting = Formatting.Indented };
 
-			try
+            Utility.WriteLine($"Saving Config File {path}");
+
+            try
 			{
 				using (TextWriter writer = new StreamWriter(path))
 				{

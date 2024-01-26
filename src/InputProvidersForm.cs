@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 
@@ -8,17 +9,21 @@ namespace BizhawkRemotePlay
     {
         enum ConnectionState
         {
-            NotConnected,
+            Disconnected,
             Connected,
             Connecting
         }
+
+
 
         private TwitchService? twitchService = null;
         private DiscordService? discordService = null;
         private BizhawkRemotePlay _player;
 
-        private ConnectionState connectedToDiscord = ConnectionState.NotConnected;
-        private ConnectionState connectedToTwitch = ConnectionState.NotConnected;
+        private ConnectionState connectedToDiscord = ConnectionState.Disconnected;
+        private ConnectionState connectedToTwitch = ConnectionState.Disconnected;
+
+
 
         public InputProvidersForm(BizhawkRemotePlay player, IService[] services)
         {
@@ -92,7 +97,8 @@ namespace BizhawkRemotePlay
                 }));
             }
 
-            connectedToTwitch = ConnectionState.NotConnected;
+            Utility.WriteLine("Disconnected from Twitch");
+            connectedToTwitch = ConnectionState.Disconnected;
         }
 
 
@@ -108,6 +114,7 @@ namespace BizhawkRemotePlay
                 }));
             }
 
+            Utility.WriteLine("Connected to twitch");
             connectedToTwitch = ConnectionState.Connected;
         }
 
@@ -138,7 +145,8 @@ namespace BizhawkRemotePlay
                 }));
             }
 
-            connectedToDiscord = ConnectionState.NotConnected;
+            Utility.WriteLine("Disconnected from Discord");
+            connectedToDiscord = ConnectionState.Disconnected;
         }
 
 
@@ -154,6 +162,7 @@ namespace BizhawkRemotePlay
                 }));
             }
 
+            Utility.WriteLine("Connected to Discord");
             connectedToDiscord = ConnectionState.Connected;
         }
 
@@ -172,7 +181,7 @@ namespace BizhawkRemotePlay
 
         private void button_ConnectTwitch_Click(object sender, EventArgs e)
         {
-            if (connectedToTwitch == ConnectionState.NotConnected)
+            if (connectedToTwitch == ConnectionState.Disconnected)
             {
                 ConnectToTwitch();
             }
@@ -204,6 +213,7 @@ namespace BizhawkRemotePlay
                         }));
                     }
 
+                    Utility.WriteLine("Connecting to Twitch...");
                     connectedToTwitch = ConnectionState.Connecting;
                 }
             }
@@ -227,6 +237,8 @@ namespace BizhawkRemotePlay
                             button_ConnectDiscord.Enabled = false;
                         }));
                     }
+
+                    Utility.WriteLine("Connecting to Discord...");
                     connectedToDiscord = ConnectionState.Connecting;
                 }
             }
@@ -256,10 +268,15 @@ namespace BizhawkRemotePlay
                 }
             }
 
+            Utility.WriteLine($"Twitch joining Channel: {channel}");
+
             listBox_JoinedChannels.Items.Add(channel);
             twitchService?.JoinChannel(channel);
+
             if (addToChannels)
+            {
                 _player.configFile.TwitchChannels.Add(channel);
+            }
         }
 
 
@@ -278,6 +295,8 @@ namespace BizhawkRemotePlay
 
         private void LeaveChannel(string channel)
         {
+            Utility.WriteLine($"Twitch Leaving Channel: {channel}");
+
             listBox_JoinedChannels.Items.Remove(channel);
             twitchService?.LeaveChannel(channel);
             _player.configFile.TwitchChannels.Remove(channel);
@@ -287,7 +306,7 @@ namespace BizhawkRemotePlay
 
         private void button_ConnectDiscord_Click(object sender, EventArgs e)
         {
-            if (connectedToDiscord == ConnectionState.NotConnected)
+            if (connectedToDiscord == ConnectionState.Disconnected)
             {
                 ConnectToDiscord();
             }
@@ -341,12 +360,16 @@ namespace BizhawkRemotePlay
             try
             {
                 ulong id = Convert.ToUInt64(channel);
+
                 if (id > 0 && !listBox_DiscordChannels.Items.Contains(channel))
                 {
                     listBox_DiscordChannels.Items.Add(channel);
                     discordService?.ListenToChannel(id);
+
                     if (addToChannels)
+                    {
                         _player.configFile.DiscordChannels.Add(channel);
+                    }
                 }
             }
             catch
@@ -375,11 +398,13 @@ namespace BizhawkRemotePlay
             {
                 case ConnectionState.Connected:
                     return "Disconnect";
-                case ConnectionState.NotConnected:
+                case ConnectionState.Disconnected:
                     return "Connect";
+                case ConnectionState.Connecting:
+                    return "Connecting...";
             }
 
-            return "Connecting...";
+            return string.Empty;
         }
 
 

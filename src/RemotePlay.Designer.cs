@@ -34,10 +34,13 @@ namespace BizhawkRemotePlay
             this.radio_Chaos = new System.Windows.Forms.RadioButton();
             this.radio_Queue = new System.Windows.Forms.RadioButton();
             this.btn_RemoveAlias = new System.Windows.Forms.Button();
-            this.label5 = new System.Windows.Forms.Label();
             this.nud_maximumActionTime = new System.Windows.Forms.NumericUpDown();
             this.nud_maximumRepititions = new System.Windows.Forms.NumericUpDown();
             this.nud_pressFramesDefault = new System.Windows.Forms.NumericUpDown();
+            this.nud_RepDelay = new System.Windows.Forms.NumericUpDown();
+            this.nud_holdFramesDefault = new System.Windows.Forms.NumericUpDown();
+            this.btn_ClearBuffer = new System.Windows.Forms.Button();
+            this.label5 = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
             this.label6 = new System.Windows.Forms.Label();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
@@ -47,11 +50,9 @@ namespace BizhawkRemotePlay
             this.label8 = new System.Windows.Forms.Label();
             this.nud_sequenceDelay = new System.Windows.Forms.NumericUpDown();
             this.timeLabelRepeitionDelay = new System.Windows.Forms.Label();
-            this.nud_RepDelay = new System.Windows.Forms.NumericUpDown();
             this.label7 = new System.Windows.Forms.Label();
             this.timeLabelHoldFrames = new System.Windows.Forms.Label();
             this.timeLabelPressFrames = new System.Windows.Forms.Label();
-            this.nud_holdFramesDefault = new System.Windows.Forms.NumericUpDown();
             this.timeLabelMaxActFrames = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
             this.cbox_Button = new System.Windows.Forms.ComboBox();
@@ -70,15 +71,14 @@ namespace BizhawkRemotePlay
             this.label10 = new System.Windows.Forms.Label();
             this.label11 = new System.Windows.Forms.Label();
             this.label_System = new System.Windows.Forms.Label();
-            this.btn_ClearBuffer = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.nud_maximumActionTime)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.nud_maximumRepititions)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.nud_pressFramesDefault)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.nud_RepDelay)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.nud_holdFramesDefault)).BeginInit();
             this.groupBox1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.nud_QueueSize)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.nud_sequenceDelay)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.nud_RepDelay)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.nud_holdFramesDefault)).BeginInit();
             this.SuspendLayout();
             // 
             // radio_Chaos
@@ -118,15 +118,6 @@ namespace BizhawkRemotePlay
         "hem.");
             this.btn_RemoveAlias.UseVisualStyleBackColor = true;
             this.btn_RemoveAlias.Click += new System.EventHandler(this.btn_RemoveAlias_Click);
-            // 
-            // label5
-            // 
-            this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(6, 119);
-            this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(83, 13);
-            this.label5.TabIndex = 16;
-            this.label5.Text = "Max Repetitions";
             // 
             // nud_maximumActionTime
             // 
@@ -172,7 +163,7 @@ namespace BizhawkRemotePlay
             this.toolTip1.SetToolTip(this.nud_maximumRepititions, "The maximum number of times a button is allowed to repeat in a single command, ca" +
         "n be used to limit abuse.");
             this.nud_maximumRepititions.Value = new decimal(new int[] {
-            20,
+            60,
             0,
             0,
             0});
@@ -197,11 +188,82 @@ namespace BizhawkRemotePlay
             this.toolTip1.SetToolTip(this.nud_pressFramesDefault, "How many frames a button Press lasts for. A Press is used when the button is Lowe" +
         "rcase.");
             this.nud_pressFramesDefault.Value = new decimal(new int[] {
-            10,
+            5,
             0,
             0,
             0});
             this.nud_pressFramesDefault.ValueChanged += new System.EventHandler(this.pressFramesDefault_ValueChanged);
+            // 
+            // nud_RepDelay
+            // 
+            this.nud_RepDelay.Location = new System.Drawing.Point(95, 91);
+            this.nud_RepDelay.Maximum = new decimal(new int[] {
+            10000,
+            0,
+            0,
+            0});
+            this.nud_RepDelay.Minimum = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+            this.nud_RepDelay.Name = "nud_RepDelay";
+            this.nud_RepDelay.Size = new System.Drawing.Size(83, 20);
+            this.nud_RepDelay.TabIndex = 30;
+            this.toolTip1.SetToolTip(this.nud_RepDelay, "The delay in frames between each button repitition press.");
+            this.nud_RepDelay.Value = new decimal(new int[] {
+            6,
+            0,
+            0,
+            0});
+            this.nud_RepDelay.ValueChanged += new System.EventHandler(this.nud_RepDelay_ValueChanged);
+            // 
+            // nud_holdFramesDefault
+            // 
+            this.nud_holdFramesDefault.Location = new System.Drawing.Point(95, 65);
+            this.nud_holdFramesDefault.Maximum = new decimal(new int[] {
+            10000,
+            0,
+            0,
+            0});
+            this.nud_holdFramesDefault.Minimum = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+            this.nud_holdFramesDefault.Name = "nud_holdFramesDefault";
+            this.nud_holdFramesDefault.Size = new System.Drawing.Size(83, 20);
+            this.nud_holdFramesDefault.TabIndex = 27;
+            this.toolTip1.SetToolTip(this.nud_holdFramesDefault, "How many frames a Hold action lasts for. A Hold action is used when the first let" +
+        "ter of a button is Capitalized.");
+            this.nud_holdFramesDefault.Value = new decimal(new int[] {
+            120,
+            0,
+            0,
+            0});
+            this.nud_holdFramesDefault.ValueChanged += new System.EventHandler(this.holdFramesDefault_ValueChanged);
+            // 
+            // btn_ClearBuffer
+            // 
+            this.btn_ClearBuffer.Location = new System.Drawing.Point(13, 353);
+            this.btn_ClearBuffer.Name = "btn_ClearBuffer";
+            this.btn_ClearBuffer.Size = new System.Drawing.Size(118, 23);
+            this.btn_ClearBuffer.TabIndex = 47;
+            this.btn_ClearBuffer.Text = "Clear Input Buffer";
+            this.toolTip1.SetToolTip(this.btn_ClearBuffer, "Clears any pending inputs, and the input queue. Use this if you want to stop what" +
+        "ever\'s going on, or if it feels like incoming inputs are NOT being processed any" +
+        "more.");
+            this.btn_ClearBuffer.UseVisualStyleBackColor = true;
+            this.btn_ClearBuffer.Click += new System.EventHandler(this.btn_ClearBuffer_Click);
+            // 
+            // label5
+            // 
+            this.label5.AutoSize = true;
+            this.label5.Location = new System.Drawing.Point(6, 119);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(83, 13);
+            this.label5.TabIndex = 16;
+            this.label5.Text = "Max Repetitions";
             // 
             // label3
             // 
@@ -318,7 +380,7 @@ namespace BizhawkRemotePlay
             this.nud_sequenceDelay.Size = new System.Drawing.Size(83, 20);
             this.nud_sequenceDelay.TabIndex = 34;
             this.nud_sequenceDelay.Value = new decimal(new int[] {
-            30,
+            10,
             0,
             0,
             0});
@@ -332,30 +394,6 @@ namespace BizhawkRemotePlay
             this.timeLabelRepeitionDelay.Size = new System.Drawing.Size(143, 13);
             this.timeLabelRepeitionDelay.TabIndex = 31;
             this.timeLabelRepeitionDelay.Text = "Repetition Delay Frame Time";
-            // 
-            // nud_RepDelay
-            // 
-            this.nud_RepDelay.Location = new System.Drawing.Point(95, 91);
-            this.nud_RepDelay.Maximum = new decimal(new int[] {
-            10000,
-            0,
-            0,
-            0});
-            this.nud_RepDelay.Minimum = new decimal(new int[] {
-            1,
-            0,
-            0,
-            0});
-            this.nud_RepDelay.Name = "nud_RepDelay";
-            this.nud_RepDelay.Size = new System.Drawing.Size(83, 20);
-            this.nud_RepDelay.TabIndex = 30;
-            this.toolTip1.SetToolTip(this.nud_RepDelay, "The delay in frames between each button repitition press.");
-            this.nud_RepDelay.Value = new decimal(new int[] {
-            30,
-            0,
-            0,
-            0});
-            this.nud_RepDelay.ValueChanged += new System.EventHandler(this.nud_RepDelay_ValueChanged);
             // 
             // label7
             // 
@@ -383,31 +421,6 @@ namespace BizhawkRemotePlay
             this.timeLabelPressFrames.Size = new System.Drawing.Size(91, 13);
             this.timeLabelPressFrames.TabIndex = 28;
             this.timeLabelPressFrames.Text = "Press Frame Time";
-            // 
-            // nud_holdFramesDefault
-            // 
-            this.nud_holdFramesDefault.Location = new System.Drawing.Point(95, 65);
-            this.nud_holdFramesDefault.Maximum = new decimal(new int[] {
-            10000,
-            0,
-            0,
-            0});
-            this.nud_holdFramesDefault.Minimum = new decimal(new int[] {
-            1,
-            0,
-            0,
-            0});
-            this.nud_holdFramesDefault.Name = "nud_holdFramesDefault";
-            this.nud_holdFramesDefault.Size = new System.Drawing.Size(83, 20);
-            this.nud_holdFramesDefault.TabIndex = 27;
-            this.toolTip1.SetToolTip(this.nud_holdFramesDefault, "How many frames a Hold action lasts for. A Hold action is used when the first let" +
-        "ter of a button is Capitalized.");
-            this.nud_holdFramesDefault.Value = new decimal(new int[] {
-            120,
-            0,
-            0,
-            0});
-            this.nud_holdFramesDefault.ValueChanged += new System.EventHandler(this.holdFramesDefault_ValueChanged);
             // 
             // timeLabelMaxActFrames
             // 
@@ -560,19 +573,6 @@ namespace BizhawkRemotePlay
             this.label_System.TabIndex = 46;
             this.label_System.Text = "None";
             // 
-            // btn_ClearBuffer
-            // 
-            this.btn_ClearBuffer.Location = new System.Drawing.Point(13, 353);
-            this.btn_ClearBuffer.Name = "btn_ClearBuffer";
-            this.btn_ClearBuffer.Size = new System.Drawing.Size(118, 23);
-            this.btn_ClearBuffer.TabIndex = 47;
-            this.btn_ClearBuffer.Text = "Clear Input Buffer";
-            this.toolTip1.SetToolTip(this.btn_ClearBuffer, "Clears any pending inputs, and the input queue. Use this if you want to stop what" +
-        "ever\'s going on, or if it feels like incoming inputs are NOT being processed any" +
-        "more.");
-            this.btn_ClearBuffer.UseVisualStyleBackColor = true;
-            this.btn_ClearBuffer.Click += new System.EventHandler(this.btn_ClearBuffer_Click);
-            // 
             // BizhawkRemotePlay
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -599,12 +599,12 @@ namespace BizhawkRemotePlay
             ((System.ComponentModel.ISupportInitialize)(this.nud_maximumActionTime)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.nud_maximumRepititions)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.nud_pressFramesDefault)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.nud_RepDelay)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.nud_holdFramesDefault)).EndInit();
             this.groupBox1.ResumeLayout(false);
             this.groupBox1.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.nud_QueueSize)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.nud_sequenceDelay)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.nud_RepDelay)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.nud_holdFramesDefault)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 

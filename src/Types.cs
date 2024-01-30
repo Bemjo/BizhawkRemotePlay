@@ -14,15 +14,15 @@ namespace BizhawkRemotePlay
 		public IDictionary<string, IDictionary<string, string>> Aliases = new Dictionary<string, IDictionary<string, string>>();
 
 		public int MaxActFrames = 4000;
-		public int HoldFrames = 60;
+		public int HoldFrames = 120;
 		public int PressFrames = 10;
-		public int RepetitionDelay = 120;
-		public int MaxReps = 30;
-		public int SequenceDelay = 30;
+		public int RepetitionDelay = 6;
+		public int MaxReps = 60;
+		public int SequenceDelay = 6;
 		public int QueueSize = 10;
 
-		public bool ChaosMode = false;
-		public bool QueueSequences = true;
+		public bool ChaosMode = true;
+		public bool QueueSequences = false;
 
 		public string ClearCommand = "!rpclear";
 

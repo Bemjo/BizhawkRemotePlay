@@ -143,14 +143,14 @@ namespace BizhawkRemotePlay
 
         private void Client_OnWhisperReceived(object sender, OnWhisperReceivedArgs e)
         {
-            ProcessMessage(e.WhisperMessage.Message);
+            ProcessMessage("twitch", e.WhisperMessage.Username ,e.WhisperMessage.Message);
         }
 
 
 
         private void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
         {
-            ProcessMessage(e.ChatMessage.Message);
+            ProcessMessage("twitch", e.ChatMessage.Username, e.ChatMessage.Message);
         }
     }
 }

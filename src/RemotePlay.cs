@@ -106,7 +106,7 @@ namespace BizhawkRemotePlay
 {
     public interface IRemotePlayer
 	{
-		void HandleMessage(string message);
+		void HandleMessage(string service, string sender, string message);
 		string CommandPrefix(string message);
 
         T LoadConfigFile<T>(string path) where T : new();
@@ -248,7 +248,7 @@ namespace BizhawkRemotePlay
 
 
 
-		public void HandleMessage(string msg)
+		public void HandleMessage(string service, string sender, string msg)
         {
 			if (!IsSystemValid)
 			{
@@ -283,22 +283,35 @@ namespace BizhawkRemotePlay
 					{
 						return;
 					}
+
+					bool addInput = false;
+
 					if (!ExecutingSequence() || radio_Chaos.Checked)
 					{
 						PressButtons(sequence, APIs.Emulation.FrameCount() + 1);
-					}
+						addInput = true;
+
+                    }
 					else if (queuedSequences.Count < nud_QueueSize.Value)
 					{
 						queuedSequences.Enqueue(sequence);
+						addInput = true;
                     }
 
-                    Invoke((MethodInvoker)delegate {
-                        inputList.Items.Insert(0, msg);
-                        if (inputList.Items.Count >= 100)
-                        {
-                            inputList.Items.RemoveAt(inputList.Items.Count - 1);
-                        }
-                    });
+					if (addInput)
+					{
+						Invoke((MethodInvoker)delegate
+						{
+							var lvi = list_Inputs.Items.Insert(0, service);
+							lvi.SubItems.Add(sender);
+							lvi.SubItems.Add(msg);
+
+							if (list_Inputs.Items.Count >= 100)
+							{
+                                list_Inputs.Items.RemoveAt(list_Inputs.Items.Count - 1);
+							}
+						});
+					}
                     break;
             }
 		}
@@ -389,8 +402,12 @@ namespace BizhawkRemotePlay
 
 			IsSystemValid = gameInfo != null && gameInfo.System.Length > 0 && gameInfo.System.CompareTo("NULL") != 0;
 
+            cbox_Button.Items.Clear();
+			cbox_Button.Enabled = IsSystemValid;
+
             if (IsSystemValid)
 			{
+				// Find the correct pad we can use, and get a sanitized list of non-banned joypad buttons
 				PadID = 1;
 				Dictionary<string, bool> buttons = ((Dictionary<string, object>)APIs.Joypad.Get(PadID)).Where(o=>!BannedButtons.Contains(o.Key.ToLower())).ToDictionary
 					(
@@ -412,9 +429,10 @@ namespace BizhawkRemotePlay
                     );
                 }
 
-				systemState.JoypadButtons = new HashSet<string>(buttons.Select(o => o.Key));
-				systemState.System = gameInfo!.System;
-
+				string[] keys = buttons.Keys.ToArray();
+                systemState.JoypadButtons = new HashSet<string>(keys);
+                cbox_Button.Items.AddRange(keys);
+                systemState.System = gameInfo!.System;
 				pressedButtons = buttons;
 
 				if (!SystemFrameRates.TryGetValue(gameInfo.System, out float systemFPS))
@@ -614,6 +632,19 @@ namespace BizhawkRemotePlay
         private void BizhawkRemotePlay_FormClosing(object sender, FormClosingEventArgs e)
         {
 			SaveConfigFile(ConfigFilePath, configFile);
+        }
+
+
+
+        private void buttonAddAlias_Click(object sender, EventArgs e)
+        {
+			string userText = tbox_ButtonAlias.Text.Trim().Replace(" ", "").ToLower();
+			if (!list_Aliases.Items.ContainsKey(userText))
+			{
+				var lvi = list_Aliases.Items.Add(userText);
+				lvi.Name = userText;
+                lvi.SubItems.Add((string)cbox_Button.SelectedItem);
+			}
         }
     }
 }

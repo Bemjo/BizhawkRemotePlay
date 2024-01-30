@@ -31,6 +31,8 @@ namespace BizhawkRemotePlay
         {
             this.components = new System.ComponentModel.Container();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
+            this.radio_Chaos = new System.Windows.Forms.RadioButton();
+            this.radio_Queue = new System.Windows.Forms.RadioButton();
             this.label5 = new System.Windows.Forms.Label();
             this.nud_maximumActionTime = new System.Windows.Forms.NumericUpDown();
             this.nud_maximumRepititions = new System.Windows.Forms.NumericUpDown();
@@ -38,6 +40,8 @@ namespace BizhawkRemotePlay
             this.label3 = new System.Windows.Forms.Label();
             this.label6 = new System.Windows.Forms.Label();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.label1 = new System.Windows.Forms.Label();
+            this.nud_QueueSize = new System.Windows.Forms.NumericUpDown();
             this.timeLabelSequenceDelay = new System.Windows.Forms.Label();
             this.label8 = new System.Windows.Forms.Label();
             this.nud_sequenceDelay = new System.Windows.Forms.NumericUpDown();
@@ -49,26 +53,53 @@ namespace BizhawkRemotePlay
             this.nud_holdFramesDefault = new System.Windows.Forms.NumericUpDown();
             this.timeLabelMaxActFrames = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
-            this.comboBoxSystemButtons = new System.Windows.Forms.ComboBox();
-            this.listBoxButtonAlias = new System.Windows.Forms.ListBox();
+            this.cbox_Button = new System.Windows.Forms.ComboBox();
             this.buttonAddAlias = new System.Windows.Forms.Button();
-            this.textBoxAlias = new System.Windows.Forms.TextBox();
-            this.inputList = new System.Windows.Forms.ListBox();
+            this.tbox_ButtonAlias = new System.Windows.Forms.TextBox();
             this.label4 = new System.Windows.Forms.Label();
             this.button_Services = new System.Windows.Forms.Button();
-            this.radio_Chaos = new System.Windows.Forms.RadioButton();
-            this.radio_Queue = new System.Windows.Forms.RadioButton();
-            this.nud_QueueSize = new System.Windows.Forms.NumericUpDown();
-            this.label1 = new System.Windows.Forms.Label();
+            this.list_Aliases = new System.Windows.Forms.ListView();
+            this.columnHeader1 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader2 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.list_Inputs = new System.Windows.Forms.ListView();
+            this.columnHeader3 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader4 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader5 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             ((System.ComponentModel.ISupportInitialize)(this.nud_maximumActionTime)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.nud_maximumRepititions)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.nud_pressFramesDefault)).BeginInit();
             this.groupBox1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.nud_QueueSize)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.nud_sequenceDelay)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.nud_RepDelay)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.nud_holdFramesDefault)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.nud_QueueSize)).BeginInit();
             this.SuspendLayout();
+            // 
+            // radio_Chaos
+            // 
+            this.radio_Chaos.AutoSize = true;
+            this.radio_Chaos.Location = new System.Drawing.Point(9, 165);
+            this.radio_Chaos.Name = "radio_Chaos";
+            this.radio_Chaos.Size = new System.Drawing.Size(85, 17);
+            this.radio_Chaos.TabIndex = 37;
+            this.radio_Chaos.Text = "Chaos Mode";
+            this.toolTip1.SetToolTip(this.radio_Chaos, "Incoming inputs are input immediately, and can interrupt other inputs sequences t" +
+        "hat are already queued for execution.");
+            this.radio_Chaos.UseVisualStyleBackColor = true;
+            // 
+            // radio_Queue
+            // 
+            this.radio_Queue.AutoSize = true;
+            this.radio_Queue.Checked = true;
+            this.radio_Queue.Location = new System.Drawing.Point(100, 165);
+            this.radio_Queue.Name = "radio_Queue";
+            this.radio_Queue.Size = new System.Drawing.Size(89, 17);
+            this.radio_Queue.TabIndex = 38;
+            this.radio_Queue.TabStop = true;
+            this.radio_Queue.Text = "Queue Inputs";
+            this.toolTip1.SetToolTip(this.radio_Queue, "Queues incoming inputs AFTER all existing sequences that are already waiting, if " +
+        "there\'s still room in the queue.");
+            this.radio_Queue.UseVisualStyleBackColor = true;
             // 
             // label5
             // 
@@ -195,6 +226,32 @@ namespace BizhawkRemotePlay
             this.groupBox1.TabIndex = 26;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Settings";
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(281, 167);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(62, 13);
+            this.label1.TabIndex = 40;
+            this.label1.Text = "Queue Size";
+            // 
+            // nud_QueueSize
+            // 
+            this.nud_QueueSize.Location = new System.Drawing.Point(195, 165);
+            this.nud_QueueSize.Minimum = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+            this.nud_QueueSize.Name = "nud_QueueSize";
+            this.nud_QueueSize.Size = new System.Drawing.Size(80, 20);
+            this.nud_QueueSize.TabIndex = 39;
+            this.nud_QueueSize.Value = new decimal(new int[] {
+            10,
+            0,
+            0,
+            0});
             // 
             // timeLabelSequenceDelay
             // 
@@ -342,21 +399,14 @@ namespace BizhawkRemotePlay
             this.label2.TabIndex = 27;
             this.label2.Text = "Hold Frames";
             // 
-            // comboBoxSystemButtons
+            // cbox_Button
             // 
-            this.comboBoxSystemButtons.FormattingEnabled = true;
-            this.comboBoxSystemButtons.Location = new System.Drawing.Point(10, 352);
-            this.comboBoxSystemButtons.Name = "comboBoxSystemButtons";
-            this.comboBoxSystemButtons.Size = new System.Drawing.Size(121, 21);
-            this.comboBoxSystemButtons.TabIndex = 27;
-            // 
-            // listBoxButtonAlias
-            // 
-            this.listBoxButtonAlias.FormattingEnabled = true;
-            this.listBoxButtonAlias.Location = new System.Drawing.Point(144, 352);
-            this.listBoxButtonAlias.Name = "listBoxButtonAlias";
-            this.listBoxButtonAlias.Size = new System.Drawing.Size(224, 212);
-            this.listBoxButtonAlias.TabIndex = 28;
+            this.cbox_Button.Enabled = false;
+            this.cbox_Button.FormattingEnabled = true;
+            this.cbox_Button.Location = new System.Drawing.Point(10, 352);
+            this.cbox_Button.Name = "cbox_Button";
+            this.cbox_Button.Size = new System.Drawing.Size(121, 21);
+            this.cbox_Button.TabIndex = 27;
             // 
             // buttonAddAlias
             // 
@@ -366,23 +416,14 @@ namespace BizhawkRemotePlay
             this.buttonAddAlias.TabIndex = 29;
             this.buttonAddAlias.Text = "Add Alias";
             this.buttonAddAlias.UseVisualStyleBackColor = true;
+            this.buttonAddAlias.Click += new System.EventHandler(this.buttonAddAlias_Click);
             // 
-            // textBoxAlias
+            // tbox_ButtonAlias
             // 
-            this.textBoxAlias.Location = new System.Drawing.Point(10, 379);
-            this.textBoxAlias.Name = "textBoxAlias";
-            this.textBoxAlias.Size = new System.Drawing.Size(120, 20);
-            this.textBoxAlias.TabIndex = 30;
-            // 
-            // inputList
-            // 
-            this.inputList.FormattingEnabled = true;
-            this.inputList.Location = new System.Drawing.Point(9, 57);
-            this.inputList.MultiColumn = true;
-            this.inputList.Name = "inputList";
-            this.inputList.SelectionMode = System.Windows.Forms.SelectionMode.None;
-            this.inputList.Size = new System.Drawing.Size(359, 95);
-            this.inputList.TabIndex = 32;
+            this.tbox_ButtonAlias.Location = new System.Drawing.Point(10, 379);
+            this.tbox_ButtonAlias.Name = "tbox_ButtonAlias";
+            this.tbox_ButtonAlias.Size = new System.Drawing.Size(120, 20);
+            this.tbox_ButtonAlias.TabIndex = 30;
             // 
             // label4
             // 
@@ -403,70 +444,69 @@ namespace BizhawkRemotePlay
             this.button_Services.UseVisualStyleBackColor = true;
             this.button_Services.Click += new System.EventHandler(this.button_Services_Click);
             // 
-            // radio_Chaos
+            // list_Aliases
             // 
-            this.radio_Chaos.AutoSize = true;
-            this.radio_Chaos.Location = new System.Drawing.Point(9, 165);
-            this.radio_Chaos.Name = "radio_Chaos";
-            this.radio_Chaos.Size = new System.Drawing.Size(85, 17);
-            this.radio_Chaos.TabIndex = 37;
-            this.radio_Chaos.Text = "Chaos Mode";
-            this.toolTip1.SetToolTip(this.radio_Chaos, "Incoming inputs are input immediately, and can interrupt other inputs sequences t" +
-        "hat are already queued for execution.");
-            this.radio_Chaos.UseVisualStyleBackColor = true;
+            this.list_Aliases.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
+            this.columnHeader1,
+            this.columnHeader2});
+            this.list_Aliases.FullRowSelect = true;
+            this.list_Aliases.GridLines = true;
+            this.list_Aliases.HideSelection = false;
+            this.list_Aliases.Location = new System.Drawing.Point(137, 349);
+            this.list_Aliases.Name = "list_Aliases";
+            this.list_Aliases.Size = new System.Drawing.Size(231, 212);
+            this.list_Aliases.TabIndex = 40;
+            this.list_Aliases.UseCompatibleStateImageBehavior = false;
+            this.list_Aliases.View = System.Windows.Forms.View.Details;
             // 
-            // radio_Queue
+            // columnHeader1
             // 
-            this.radio_Queue.AutoSize = true;
-            this.radio_Queue.Checked = true;
-            this.radio_Queue.Location = new System.Drawing.Point(100, 165);
-            this.radio_Queue.Name = "radio_Queue";
-            this.radio_Queue.Size = new System.Drawing.Size(89, 17);
-            this.radio_Queue.TabIndex = 38;
-            this.radio_Queue.TabStop = true;
-            this.radio_Queue.Text = "Queue Inputs";
-            this.toolTip1.SetToolTip(this.radio_Queue, "Queues incoming inputs AFTER all existing sequences that are already waiting, if " +
-        "there\'s still room in the queue.");
-            this.radio_Queue.UseVisualStyleBackColor = true;
+            this.columnHeader1.Text = "Alias";
             // 
-            // nud_QueueSize
+            // columnHeader2
             // 
-            this.nud_QueueSize.Location = new System.Drawing.Point(195, 165);
-            this.nud_QueueSize.Minimum = new decimal(new int[] {
-            1,
-            0,
-            0,
-            0});
-            this.nud_QueueSize.Name = "nud_QueueSize";
-            this.nud_QueueSize.Size = new System.Drawing.Size(80, 20);
-            this.nud_QueueSize.TabIndex = 39;
-            this.nud_QueueSize.Value = new decimal(new int[] {
-            10,
-            0,
-            0,
-            0});
+            this.columnHeader2.Text = "Button";
             // 
-            // label1
+            // list_Inputs
             // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(281, 167);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(62, 13);
-            this.label1.TabIndex = 40;
-            this.label1.Text = "Queue Size";
+            this.list_Inputs.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
+            this.columnHeader3,
+            this.columnHeader4,
+            this.columnHeader5});
+            this.list_Inputs.HeaderStyle = System.Windows.Forms.ColumnHeaderStyle.Nonclickable;
+            this.list_Inputs.HideSelection = false;
+            this.list_Inputs.Location = new System.Drawing.Point(12, 57);
+            this.list_Inputs.MultiSelect = false;
+            this.list_Inputs.Name = "list_Inputs";
+            this.list_Inputs.Size = new System.Drawing.Size(356, 95);
+            this.list_Inputs.TabIndex = 41;
+            this.list_Inputs.UseCompatibleStateImageBehavior = false;
+            this.list_Inputs.View = System.Windows.Forms.View.Details;
+            // 
+            // columnHeader3
+            // 
+            this.columnHeader3.Text = "Service";
+            // 
+            // columnHeader4
+            // 
+            this.columnHeader4.Text = "Sender";
+            // 
+            // columnHeader5
+            // 
+            this.columnHeader5.Text = "Command";
             // 
             // BizhawkRemotePlay
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(380, 573);
+            this.Controls.Add(this.list_Inputs);
+            this.Controls.Add(this.list_Aliases);
             this.Controls.Add(this.button_Services);
             this.Controls.Add(this.label4);
-            this.Controls.Add(this.inputList);
-            this.Controls.Add(this.textBoxAlias);
+            this.Controls.Add(this.tbox_ButtonAlias);
             this.Controls.Add(this.buttonAddAlias);
-            this.Controls.Add(this.listBoxButtonAlias);
-            this.Controls.Add(this.comboBoxSystemButtons);
+            this.Controls.Add(this.cbox_Button);
             this.Controls.Add(this.groupBox1);
             this.MaximizeBox = false;
             this.Name = "BizhawkRemotePlay";
@@ -477,10 +517,10 @@ namespace BizhawkRemotePlay
             ((System.ComponentModel.ISupportInitialize)(this.nud_pressFramesDefault)).EndInit();
             this.groupBox1.ResumeLayout(false);
             this.groupBox1.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.nud_QueueSize)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.nud_sequenceDelay)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.nud_RepDelay)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.nud_holdFramesDefault)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.nud_QueueSize)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -500,22 +540,27 @@ namespace BizhawkRemotePlay
         private System.Windows.Forms.NumericUpDown nud_holdFramesDefault;
         private System.Windows.Forms.Label timeLabelMaxActFrames;
         private System.Windows.Forms.Label label2;
-        private System.Windows.Forms.ComboBox comboBoxSystemButtons;
-        private System.Windows.Forms.ListBox listBoxButtonAlias;
+        private System.Windows.Forms.ComboBox cbox_Button;
         private System.Windows.Forms.Button buttonAddAlias;
-        private System.Windows.Forms.TextBox textBoxAlias;
+        private System.Windows.Forms.TextBox tbox_ButtonAlias;
         private System.Windows.Forms.Label timeLabelRepeitionDelay;
         private System.Windows.Forms.NumericUpDown nud_RepDelay;
         private System.Windows.Forms.Label label7;
         private System.Windows.Forms.Label timeLabelSequenceDelay;
         private System.Windows.Forms.Label label8;
         private System.Windows.Forms.NumericUpDown nud_sequenceDelay;
-        private System.Windows.Forms.ListBox inputList;
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.Button button_Services;
         private System.Windows.Forms.RadioButton radio_Queue;
         private System.Windows.Forms.RadioButton radio_Chaos;
         private System.Windows.Forms.NumericUpDown nud_QueueSize;
         private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.ListView list_Aliases;
+        private System.Windows.Forms.ColumnHeader columnHeader1;
+        private System.Windows.Forms.ColumnHeader columnHeader2;
+        private System.Windows.Forms.ListView list_Inputs;
+        private System.Windows.Forms.ColumnHeader columnHeader3;
+        private System.Windows.Forms.ColumnHeader columnHeader4;
+        private System.Windows.Forms.ColumnHeader columnHeader5;
     }
 }

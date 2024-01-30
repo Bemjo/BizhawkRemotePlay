@@ -65,7 +65,7 @@ namespace BizhawkRemotePlay
             {
                 string content = message.CleanContent;
                 Utility.WriteLine(content);
-                ProcessMessage(content);
+                ProcessMessage("discord", message.Author.GlobalName, content);
             }
 
             return Task.CompletedTask;

@@ -439,23 +439,33 @@ namespace BizhawkRemotePlay
             if (aliases.ContainsKey(revBtnName))
             {
                 realBtnName = aliases[revBtnName];
-            }
 
-            // Find our button in the list of the valid joypad buttons, ignoring case incase we couldn't find an alias entry
-            IList<string> joyBtn = state.JoypadButtons.Where(
-                o => {
-                    return o.Equals(realBtnName, StringComparison.InvariantCultureIgnoreCase);
+                if (!state.JoypadButtons.Contains(realBtnName))
+                {
+                    btnCmd = new ButtonCommand();
+                    return false;
                 }
-            ).ToList();
-
-            if (joyBtn.Count() <= 0 )
-            {
-                btnCmd = new ButtonCommand();
-                return false;
             }
+            // Do a lookup of the raw user input on the joypad buttons
+            else
+            {
+                // Find our button in the list of the valid joypad buttons, ignoring case incase we couldn't find an alias entry
+                IList<string> joyBtn = state.JoypadButtons.Where(
+                    o =>
+                    {
+                        return o.Equals(realBtnName, StringComparison.InvariantCultureIgnoreCase);
+                    }
+                ).ToList();
 
-            // Get the joypad entry for this button name, to correct for our ignoring case for missing aliases
-            realBtnName = joyBtn.ElementAt(0);
+                if (joyBtn.Count() <= 0)
+                {
+                    btnCmd = new ButtonCommand();
+                    return false;
+                }
+
+                // Get the joypad entry for this button name, to correct for our ignoring case for missing aliases
+                realBtnName = joyBtn.ElementAt(0);
+            }
 
             // Parse out the first repetition found, this accounts for extra repetitions in improperly formatted strings
             if (btnAndReps.Length >= 2)

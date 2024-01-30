@@ -40,11 +40,11 @@ namespace BizhawkRemotePlay
         /// This must be called be the service implementation after parsing the message
         /// </summary>
         /// <param name="message"></param>
-        protected void ProcessMessage(string message)
+        protected void ProcessMessage(string service, string sender, string message)
         {
             string prefix = _player.CommandPrefix(message);
 
-            _player.HandleMessage($"{prefix}:{message}");
+            _player.HandleMessage(service, sender, $"{prefix}:{message}");
         }
 
         /// <summary>

@@ -33,6 +33,7 @@ namespace BizhawkRemotePlay
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             this.radio_Chaos = new System.Windows.Forms.RadioButton();
             this.radio_Queue = new System.Windows.Forms.RadioButton();
+            this.btn_RemoveAlias = new System.Windows.Forms.Button();
             this.label5 = new System.Windows.Forms.Label();
             this.nud_maximumActionTime = new System.Windows.Forms.NumericUpDown();
             this.nud_maximumRepititions = new System.Windows.Forms.NumericUpDown();
@@ -65,6 +66,11 @@ namespace BizhawkRemotePlay
             this.columnHeader3 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.columnHeader4 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.columnHeader5 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.label9 = new System.Windows.Forms.Label();
+            this.label10 = new System.Windows.Forms.Label();
+            this.label11 = new System.Windows.Forms.Label();
+            this.label_System = new System.Windows.Forms.Label();
+            this.btn_ClearBuffer = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.nud_maximumActionTime)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.nud_maximumRepititions)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.nud_pressFramesDefault)).BeginInit();
@@ -78,10 +84,12 @@ namespace BizhawkRemotePlay
             // radio_Chaos
             // 
             this.radio_Chaos.AutoSize = true;
+            this.radio_Chaos.Checked = true;
             this.radio_Chaos.Location = new System.Drawing.Point(9, 165);
             this.radio_Chaos.Name = "radio_Chaos";
             this.radio_Chaos.Size = new System.Drawing.Size(85, 17);
             this.radio_Chaos.TabIndex = 37;
+            this.radio_Chaos.TabStop = true;
             this.radio_Chaos.Text = "Chaos Mode";
             this.toolTip1.SetToolTip(this.radio_Chaos, "Incoming inputs are input immediately, and can interrupt other inputs sequences t" +
         "hat are already queued for execution.");
@@ -90,16 +98,26 @@ namespace BizhawkRemotePlay
             // radio_Queue
             // 
             this.radio_Queue.AutoSize = true;
-            this.radio_Queue.Checked = true;
             this.radio_Queue.Location = new System.Drawing.Point(100, 165);
             this.radio_Queue.Name = "radio_Queue";
             this.radio_Queue.Size = new System.Drawing.Size(89, 17);
             this.radio_Queue.TabIndex = 38;
-            this.radio_Queue.TabStop = true;
             this.radio_Queue.Text = "Queue Inputs";
             this.toolTip1.SetToolTip(this.radio_Queue, "Queues incoming inputs AFTER all existing sequences that are already waiting, if " +
         "there\'s still room in the queue.");
             this.radio_Queue.UseVisualStyleBackColor = true;
+            // 
+            // btn_RemoveAlias
+            // 
+            this.btn_RemoveAlias.Location = new System.Drawing.Point(12, 538);
+            this.btn_RemoveAlias.Name = "btn_RemoveAlias";
+            this.btn_RemoveAlias.Size = new System.Drawing.Size(119, 23);
+            this.btn_RemoveAlias.TabIndex = 42;
+            this.btn_RemoveAlias.Text = "Remove Alias";
+            this.toolTip1.SetToolTip(this.btn_RemoveAlias, "Select one or more entries from the list to the right, and click this to remove t" +
+        "hem.");
+            this.btn_RemoveAlias.UseVisualStyleBackColor = true;
+            this.btn_RemoveAlias.Click += new System.EventHandler(this.btn_RemoveAlias_Click);
             // 
             // label5
             // 
@@ -131,6 +149,8 @@ namespace BizhawkRemotePlay
             this.nud_maximumActionTime.Name = "nud_maximumActionTime";
             this.nud_maximumActionTime.Size = new System.Drawing.Size(83, 20);
             this.nud_maximumActionTime.TabIndex = 18;
+            this.toolTip1.SetToolTip(this.nud_maximumActionTime, "The maximum number of frames an entered command is allowed to run for. Any comman" +
+        "d that will exist for more than this value is truncated and ignored.");
             this.nud_maximumActionTime.Value = new decimal(new int[] {
             4000,
             0,
@@ -149,6 +169,8 @@ namespace BizhawkRemotePlay
             this.nud_maximumRepititions.Name = "nud_maximumRepititions";
             this.nud_maximumRepititions.Size = new System.Drawing.Size(83, 20);
             this.nud_maximumRepititions.TabIndex = 20;
+            this.toolTip1.SetToolTip(this.nud_maximumRepititions, "The maximum number of times a button is allowed to repeat in a single command, ca" +
+        "n be used to limit abuse.");
             this.nud_maximumRepititions.Value = new decimal(new int[] {
             20,
             0,
@@ -172,6 +194,8 @@ namespace BizhawkRemotePlay
             this.nud_pressFramesDefault.Name = "nud_pressFramesDefault";
             this.nud_pressFramesDefault.Size = new System.Drawing.Size(83, 20);
             this.nud_pressFramesDefault.TabIndex = 22;
+            this.toolTip1.SetToolTip(this.nud_pressFramesDefault, "How many frames a button Press lasts for. A Press is used when the button is Lowe" +
+        "rcase.");
             this.nud_pressFramesDefault.Value = new decimal(new int[] {
             10,
             0,
@@ -252,6 +276,7 @@ namespace BizhawkRemotePlay
             0,
             0,
             0});
+            this.nud_QueueSize.ValueChanged += new System.EventHandler(this.nud_QueueSize_ValueChanged);
             // 
             // timeLabelSequenceDelay
             // 
@@ -324,6 +349,7 @@ namespace BizhawkRemotePlay
             this.nud_RepDelay.Name = "nud_RepDelay";
             this.nud_RepDelay.Size = new System.Drawing.Size(83, 20);
             this.nud_RepDelay.TabIndex = 30;
+            this.toolTip1.SetToolTip(this.nud_RepDelay, "The delay in frames between each button repitition press.");
             this.nud_RepDelay.Value = new decimal(new int[] {
             30,
             0,
@@ -374,6 +400,8 @@ namespace BizhawkRemotePlay
             this.nud_holdFramesDefault.Name = "nud_holdFramesDefault";
             this.nud_holdFramesDefault.Size = new System.Drawing.Size(83, 20);
             this.nud_holdFramesDefault.TabIndex = 27;
+            this.toolTip1.SetToolTip(this.nud_holdFramesDefault, "How many frames a Hold action lasts for. A Hold action is used when the first let" +
+        "ter of a button is Capitalized.");
             this.nud_holdFramesDefault.Value = new decimal(new int[] {
             120,
             0,
@@ -401,18 +429,19 @@ namespace BizhawkRemotePlay
             // 
             // cbox_Button
             // 
+            this.cbox_Button.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cbox_Button.Enabled = false;
             this.cbox_Button.FormattingEnabled = true;
-            this.cbox_Button.Location = new System.Drawing.Point(10, 352);
+            this.cbox_Button.Location = new System.Drawing.Point(12, 439);
             this.cbox_Button.Name = "cbox_Button";
-            this.cbox_Button.Size = new System.Drawing.Size(121, 21);
+            this.cbox_Button.Size = new System.Drawing.Size(119, 21);
             this.cbox_Button.TabIndex = 27;
             // 
             // buttonAddAlias
             // 
-            this.buttonAddAlias.Location = new System.Drawing.Point(9, 408);
+            this.buttonAddAlias.Location = new System.Drawing.Point(12, 509);
             this.buttonAddAlias.Name = "buttonAddAlias";
-            this.buttonAddAlias.Size = new System.Drawing.Size(75, 23);
+            this.buttonAddAlias.Size = new System.Drawing.Size(119, 23);
             this.buttonAddAlias.TabIndex = 29;
             this.buttonAddAlias.Text = "Add Alias";
             this.buttonAddAlias.UseVisualStyleBackColor = true;
@@ -420,9 +449,9 @@ namespace BizhawkRemotePlay
             // 
             // tbox_ButtonAlias
             // 
-            this.tbox_ButtonAlias.Location = new System.Drawing.Point(10, 379);
+            this.tbox_ButtonAlias.Location = new System.Drawing.Point(12, 483);
             this.tbox_ButtonAlias.Name = "tbox_ButtonAlias";
-            this.tbox_ButtonAlias.Size = new System.Drawing.Size(120, 20);
+            this.tbox_ButtonAlias.Size = new System.Drawing.Size(119, 20);
             this.tbox_ButtonAlias.TabIndex = 30;
             // 
             // label4
@@ -495,11 +524,66 @@ namespace BizhawkRemotePlay
             // 
             this.columnHeader5.Text = "Command";
             // 
+            // label9
+            // 
+            this.label9.AutoSize = true;
+            this.label9.Location = new System.Drawing.Point(12, 423);
+            this.label9.Name = "label9";
+            this.label9.Size = new System.Drawing.Size(75, 13);
+            this.label9.TabIndex = 43;
+            this.label9.Text = "System Button";
+            // 
+            // label10
+            // 
+            this.label10.AutoSize = true;
+            this.label10.Location = new System.Drawing.Point(12, 467);
+            this.label10.Name = "label10";
+            this.label10.Size = new System.Drawing.Size(67, 13);
+            this.label10.TabIndex = 44;
+            this.label10.Text = "Custom Alias";
+            // 
+            // label11
+            // 
+            this.label11.AutoSize = true;
+            this.label11.Location = new System.Drawing.Point(12, 380);
+            this.label11.Name = "label11";
+            this.label11.Size = new System.Drawing.Size(44, 13);
+            this.label11.TabIndex = 45;
+            this.label11.Text = "System:";
+            // 
+            // label_System
+            // 
+            this.label_System.AutoSize = true;
+            this.label_System.Location = new System.Drawing.Point(62, 380);
+            this.label_System.Name = "label_System";
+            this.label_System.Size = new System.Drawing.Size(33, 13);
+            this.label_System.TabIndex = 46;
+            this.label_System.Text = "None";
+            // 
+            // btn_ClearBuffer
+            // 
+            this.btn_ClearBuffer.Location = new System.Drawing.Point(13, 353);
+            this.btn_ClearBuffer.Name = "btn_ClearBuffer";
+            this.btn_ClearBuffer.Size = new System.Drawing.Size(118, 23);
+            this.btn_ClearBuffer.TabIndex = 47;
+            this.btn_ClearBuffer.Text = "Clear Input Buffer";
+            this.toolTip1.SetToolTip(this.btn_ClearBuffer, "Clears any pending inputs, and the input queue. Use this if you want to stop what" +
+        "ever\'s going on, or if it feels like incoming inputs are NOT being processed any" +
+        "more.");
+            this.btn_ClearBuffer.UseVisualStyleBackColor = true;
+            this.btn_ClearBuffer.Click += new System.EventHandler(this.btn_ClearBuffer_Click);
+            // 
             // BizhawkRemotePlay
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(380, 573);
+            this.Controls.Add(this.btn_ClearBuffer);
+            this.Controls.Add(this.label_System);
+            this.Controls.Add(this.label11);
+            this.Controls.Add(this.label10);
+            this.Controls.Add(this.label9);
+            this.Controls.Add(this.btn_RemoveAlias);
             this.Controls.Add(this.list_Inputs);
             this.Controls.Add(this.list_Aliases);
             this.Controls.Add(this.button_Services);
@@ -562,5 +646,11 @@ namespace BizhawkRemotePlay
         private System.Windows.Forms.ColumnHeader columnHeader3;
         private System.Windows.Forms.ColumnHeader columnHeader4;
         private System.Windows.Forms.ColumnHeader columnHeader5;
+        private System.Windows.Forms.Button btn_RemoveAlias;
+        private System.Windows.Forms.Label label9;
+        private System.Windows.Forms.Label label10;
+        private System.Windows.Forms.Label label11;
+        private System.Windows.Forms.Label label_System;
+        private System.Windows.Forms.Button btn_ClearBuffer;
     }
 }

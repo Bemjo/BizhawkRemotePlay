@@ -9,8 +9,9 @@ namespace BizhawkRemotePlay
     {
 		public bool AutoLoginTwitch = false;
         public bool AutoLoginDiscord = false;
-        public List<string> TwitchChannels = new List<string>();
-        public List<string> DiscordChannels = new List<string>();
+        public IList<string> TwitchChannels = new List<string>();
+        public IList<string> DiscordChannels = new List<string>();
+		public IDictionary<string, IDictionary<string, string>> Aliases = new Dictionary<string, IDictionary<string, string>>();
 
 		public int MaxActFrames = 4000;
 		public int HoldFrames = 60;
@@ -43,10 +44,12 @@ namespace BizhawkRemotePlay
 		public float SystemFPS { get; set; }
 		public string System { get; set; }
 
+		public IDictionary<string, IDictionary<string, string>> ButtonAliases { get; set; } = new Dictionary<string, IDictionary<string, string>>();
+
 		public HashSet<string> JoypadButtons { get; set; } = new HashSet<string>();
 
 		public State(
-			int maxReps = 10,
+            int maxReps = 10,
 			int maxFrames = 10,
 			int pressFrames = 4,
 			int holdFrames = 20,
@@ -54,9 +57,9 @@ namespace BizhawkRemotePlay
 			int defaultSequenceDelay = 30,
 			int systemFPS = 60,
 			string system = ""
-			)
+            )
 		{
-			MaxReps = maxReps;
+            MaxReps = maxReps;
 			MaxFrames = maxFrames;
 			PressFrames = pressFrames;
 			HoldFrames = holdFrames;
@@ -64,7 +67,6 @@ namespace BizhawkRemotePlay
 			DefaultSequenceDelay = defaultSequenceDelay;
 			SystemFPS = systemFPS;
 			System = system;
-
         }
 	}
 

@@ -1,7 +1,7 @@
 # Description
 Remote control tool for bizhawk, allows various services to send text command sequences representing gamepad controller buttons.  
 
-## Service Support:
+## Service Support
 * Twitch Chat  
 * Discord Channels  
 
@@ -9,18 +9,9 @@ Remote control tool for bizhawk, allows various services to send text command se
 Copy the Bizhawk folder over your local copy of Bizhawk.  
 It places this plugin into Bizhawk/ExternalTools and required library DLLs in Bizhawk/dll  
 
-## API Keys & Configuration
+## API Keys
 In order to use this plugin, you will need your own API/bot keys for each service you wish to use.  
-
-You can fill out a JSON file with the folling entries, replace the relevant sections with your own applicable data.  
-
-```
-{
-	"twitchUsername": "Your Twitch Username",
-	"twitchToken": "Your twitch chat token",
-	"discordToken": "Your discord bot token"
-}
-```  
+You'll need to enter these details inside of the tool itself.  
 
 ### Twitch
 For twitch you will need a username, and your oauth key for the TMI.

@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Windows.Forms;
 using BizHawk.Client.Common;
 using BizHawk.Client.EmuHawk;
-using BizHawk.WinForms.Controls;
+using BizHawk.Common.StringExtensions;
 using Newtonsoft.Json;
 
 // Syntax https://pastebin.com/Uxn6zREQ
@@ -116,24 +117,23 @@ namespace BizhawkRemotePlay
 
 	[ExternalTool("Remote Play")]
 	public partial class BizhawkRemotePlay : ToolFormBase, IExternalToolForm, IRemotePlayer
-    {
-        public const int MILLIS_PER_SEC = 1000;
-        public const int BUFFER_SIZE = 128;
+	{
+		public const int MILLIS_PER_SEC = 1000;
+		public const int BUFFER_SIZE = 128;
 
-        // BizHawk stuff
-        protected override string WindowTitleStatic => "Remote Play";
-        public const string ConfigFilePath = "ExternalTools/remoteplay.json";
+		// BizHawk stuff
+		protected override string WindowTitleStatic => "Remote Play";
+		public const string ConfigFilePath = "ExternalTools/remoteplay.json";
 
-        public ApiContainer? _maybeAPIContainer { get; set; }
+		public ApiContainer? _maybeAPIContainer { get; set; }
 		private ApiContainer APIs => _maybeAPIContainer!;
 
-		private Dictionary<string, bool>					pressedButtons = new Dictionary<string, bool>();
-		private Dictionary<ulong, Dictionary<string, bool>> frameButtonStates = new Dictionary<ulong, Dictionary<string, bool>>();
-		private Queue<List<ButtonSequence>>					queuedSequences = new Queue<List<ButtonSequence>>();
+		private Dictionary<string, bool> pressedButtons = new Dictionary<string, bool>();
+		private Dictionary<int, Dictionary<string, bool>> frameButtonStates = new Dictionary<int, Dictionary<string, bool>>();
+		private Queue<List<ButtonSequence>> queuedSequences = new Queue<List<ButtonSequence>>();
 
 		private State systemState;
 
-		private ulong totalFrames;
 		private StringDecoder decoder;
 
 		private InputProvidersForm servicesForm;
@@ -141,50 +141,43 @@ namespace BizhawkRemotePlay
 
 		public int? PadID { get; private set; } = null;
 
+		public bool IsSystemValid { get; private set; } = false;
+
         // Actual system FPS to calculate times from and from frame counts accurately 
-        public static readonly IReadOnlyDictionary<string, double> SystemFrameRates = new Dictionary<string, double>()
+        public static readonly IReadOnlyDictionary<string, float> SystemFrameRates = new Dictionary<string, float>()
 		{
-			{"NES", 60.0988},
-			{"SNES", 60.0988 },
-			{"GBC", 59.7275 },
-            {"GB", 59.7275 },
-            {"Genesis", 59.9275 },
-            {"PSX", 60 },
+			{"NES", 60.0988f},
+			{"SNES", 60.0988f},
+			{"GBC", 59.7275f},
+            {"GB", 59.7275f},
+            {"GBA", 59.7275f},
+            {"GEN", 59.9275f},
+            {"PSX", 60f},
+            {"N64", 60f},
+            {"MSX", 59.9275f},
+            {"AppleII", 59.9275f},
+            {"Coleco", 59.9275f},
+			{"A26", 59.9275f},
+			{"C64", 59.9275f},
+			{"NDS", 59.8261f}
         };
 
-		// A List of all controller button names
-		public static readonly IReadOnlyList<string> ButtonNames = new List<string>()
+		public static readonly string[] BannedButtons =
 		{
-			"Up",
-			"Down",
-			"Left",
-			"Right",
-            "D-Pad Up",
-            "D-Pad Down",
-            "D-Pad Left",
-            "D-Pad Right",
-            "A",
-			"B",
-			"C",
-			"X",
-            "△",
-            "□",
-            "○",
-            "Y",
-			"Z",
-			"L",
-			"R",
-            "L1",
-            "R1",
-            "L2",
-            "R2",
-            "L3",
-            "R3",
-            "Start",
-			"Select",
-			"Mode",
-			"Analog",
-		};
+			"power",
+			"reset",
+			"tilt x",
+			"tilt y",
+			"tilt z",
+			"close tray",
+			"open tray",
+			"light sensor",
+            "mode",
+            "analog",
+            "lidopen",
+			"lidclose",
+			"touch"
+        };
 
 
 
@@ -193,13 +186,14 @@ namespace BizhawkRemotePlay
 			InitializeComponent();
             configFile = LoadConfigFile<RemotePlayConfig>(ConfigFilePath);
 
-            systemState = new State(false,
+            systemState = new State(
                 configFile.MaxReps,
                 configFile.MaxActFrames,
                 configFile.PressFrames,
                 configFile.HoldFrames,
                 configFile.RepetitionDelay,
-                configFile.SequenceDelay);
+                configFile.SequenceDelay
+			);
 
 			ReloadUI();
 
@@ -223,9 +217,10 @@ namespace BizhawkRemotePlay
 			nud_maximumRepititions.Value = configFile.MaxReps;
 			nud_RepDelay .Value = configFile.RepetitionDelay;
 			nud_sequenceDelay.Value = configFile.SequenceDelay;
+			nud_QueueSize.Value = configFile.QueueSize;
 
-			chaosModeEnabled.Checked = configFile.ChaosMode;
-			allowQueueSequence.Checked = configFile.QueueSequences;
+			radio_Chaos.Checked = configFile.ChaosMode;
+			radio_Queue.Checked = configFile.QueueSequences;
 
 			UIRecalculateTimeLabels();
         }
@@ -246,15 +241,6 @@ namespace BizhawkRemotePlay
 
 
 
-        private bool CoreSupportsInput(int? padId)
-		{
-			var btns = APIs.Joypad.Get(padId);
-
-			return (btns != null) && btns.Count > 0;
-		}
-
-
-
 		public bool ExecutingSequence()
         {
 			return frameButtonStates.Count > 0;
@@ -264,8 +250,10 @@ namespace BizhawkRemotePlay
 
 		public void HandleMessage(string msg)
         {
-			if (!systemState.SupportsInput)
+			if (!IsSystemValid)
+			{
 				return;
+			}
 
 			var i = msg.IndexOf(':');
 			// We expect this to be in position 3
@@ -283,58 +271,64 @@ namespace BizhawkRemotePlay
 			Utility.WriteLine($"Command: [{cmd}], Msg: [{msg}]");
 #endif
 			switch (cmd.ToLower())
-            {
-				// Buttons
-				case "bt":
+            {               // Clear Stored Inputs
+                case "cl":
+                    pressedButtons = pressedButtons.ToDictionary(o => o.Key, o => false);
+                    frameButtonStates.Clear();
+                    break;
+
+                // Buttons
+                default:
 					if (!decoder.ValidateButtonString(msg, out List<ButtonSequence> sequence))
 					{
 						return;
 					}
-
-					if (!ExecutingSequence() || chaosModeEnabled.Checked)
+					if (!ExecutingSequence() || radio_Chaos.Checked)
 					{
-						PressButtons(sequence);
+						PressButtons(sequence, APIs.Emulation.FrameCount() + 1);
 					}
-					else if (allowQueueSequence.Checked)
+					else if (queuedSequences.Count < nud_QueueSize.Value)
 					{
 						queuedSequences.Enqueue(sequence);
                     }
-					break;
 
-				// Clear Stored Inputs
-				case "cl":
-					pressedButtons = Utility.CreateSystemJoypad(systemState.CurrentSystem);
-					frameButtonStates.Clear();
-					break;
-
-				default:
-					Utility.WriteLine($"Received Invalid command: [{cmd}] with message [{msg}");
-					break;
+                    Invoke((MethodInvoker)delegate {
+                        inputList.Items.Insert(0, msg);
+                        if (inputList.Items.Count >= 100)
+                        {
+                            inputList.Items.RemoveAt(inputList.Items.Count - 1);
+                        }
+                    });
+                    break;
             }
 		}
 
 
 
-        private void PressButtons(List<ButtonSequence> sequence)
+        /// <summary>
+        /// Processes each ButtonSequence, modifying frameButtonStates to match the sequence
+		/// Calculates button 
+        /// </summary>
+        /// <param name="sequence"></param>
+        private void PressButtons(List<ButtonSequence> sequence, int sequenceStart)
         {
 #if DEBUG
-			Utility.WriteLine($"Pressing buttons on frame: {totalFrames}");
+			Utility.WriteLine($"Pressing buttons on frame: {APIs.Emulation.FrameCount()}");
 #endif
-			ulong sequenceStart = totalFrames;
 			
 			foreach (var seq in sequence)
             {
-				ulong sequenceDuration = 0;
+				int sequenceDuration = 0;
 
 				sequenceStart += seq.CommandDelay;
 
 				foreach (ButtonCommand btns in seq.Buttons)
                 {
-					uint delta = btns.Duration + btns.Reps.Delay;
-					ulong startFrame = sequenceStart - delta;
-                    ulong endFrame = btns.Duration + sequenceStart - delta;
+					int delta = btns.Duration + btns.Reps.Delay;
+					int startFrame = sequenceStart - delta;
+                    int endFrame = btns.Duration + sequenceStart - delta;
 
-					for (uint i = 1; i <= btns.Reps.Reps; ++i)
+					for (int i = 1; i <= btns.Reps.Reps; ++i)
 					{
 						startFrame += delta;
 						endFrame += delta;
@@ -387,36 +381,43 @@ namespace BizhawkRemotePlay
 
 		/// <summary>
 		/// Override Bizhawk ToolFormBase method, this is called when the plugin is loaded, and whenever a new core/rom is loaded
+		/// We find the system controls here
 		/// </summary>
 		public override void Restart()
         {
 			var gameInfo = APIs.Emulation.GetGameInfo();
 
-			if (gameInfo != null && gameInfo.System.Length > 0 && gameInfo.System.CompareTo("NULL") != 0)
+			IsSystemValid = gameInfo != null && gameInfo.System.Length > 0 && gameInfo.System.CompareTo("NULL") != 0;
+
+            if (IsSystemValid)
 			{
-				systemState.CurrentSystem = gameInfo.System;
-				pressedButtons = Utility.CreateSystemJoypad(systemState.CurrentSystem);
+				PadID = 1;
+				Dictionary<string, bool> buttons = ((Dictionary<string, object>)APIs.Joypad.Get(PadID)).Where(o=>!BannedButtons.Contains(o.Key.ToLower())).ToDictionary
+					(
+						o => {
+							return o.Key.RemovePrefix("p1 ").RemovePrefix("P1 ");
+						},
+						_ => false
+					);
 
-                systemState.SupportsInput = CoreSupportsInput(PadID);
-
-                if (!systemState.SupportsInput)
-                {
-					PadID = 0;
-                    systemState.SupportsInput = CoreSupportsInput(PadID);
+				if (buttons.Count <= 0)
+				{
+					PadID = null;
+                    buttons = ((Dictionary<string, object>)APIs.Joypad.Get(PadID)).Where(o => !BannedButtons.Contains(o.Key.ToLower())).ToDictionary
+                    (
+                        o => {
+                            return o.Key.RemovePrefix("p1 ").RemovePrefix("P1 ");
+                        },
+                        _ => false
+                    );
                 }
-				if (!systemState.SupportsInput)
-				{
-					PadID = 1;
-                    systemState.SupportsInput = CoreSupportsInput(PadID);
-				}
-				if (!systemState.SupportsInput)
-				{
-					Utility.WriteLine("Current System core does NOT support input manipulation, this plugin will not function. Please use a different core if possible.");
-				}
 
-                totalFrames = 0;
+				systemState.JoypadButtons = new HashSet<string>(buttons.Select(o => o.Key));
+				systemState.System = gameInfo!.System;
 
-				if (!SystemFrameRates.TryGetValue(systemState.CurrentSystem, out double systemFPS))
+				pressedButtons = buttons;
+
+				if (!SystemFrameRates.TryGetValue(gameInfo.System, out float systemFPS))
 				{
 					systemState.SystemFPS = ((gameInfo.Region?.ToLower().CompareTo("PAL") ?? 1) == 0) ? 50 : 60;
 				}
@@ -427,10 +428,6 @@ namespace BizhawkRemotePlay
 				
 				UIRecalculateTimeLabels();
 			}
-			else
-            {
-				systemState.SupportsInput = false;
-            }
 		}
 
 
@@ -445,13 +442,13 @@ namespace BizhawkRemotePlay
         protected override void UpdateBefore()
 		{
 			// Just don't bother if the joypad functions aren't going to work
-			if (!systemState.SupportsInput)
+			if (!IsSystemValid)
 			{
 				return;
 			}
-			
-			// Change button states that are queued to be changed this frame
-			if (frameButtonStates.TryGetValue(totalFrames, out Dictionary<string, bool> frameStateChange))
+
+            // Change button states that are queued to be changed this frame
+            if (frameButtonStates.TryGetValue(APIs.Emulation.FrameCount(), out Dictionary<string, bool> frameStateChange))
 			{
 				foreach (var state in frameStateChange)
                 {
@@ -473,17 +470,17 @@ namespace BizhawkRemotePlay
 
         protected override void UpdateAfter()
         {
-			if (!systemState.SupportsInput)
+			if (!IsSystemValid)
 			{
 				return;
 			}
 
-			frameButtonStates.Remove(totalFrames);
-			totalFrames++;
+			int f = APIs.Emulation.FrameCount();
+            frameButtonStates.Remove(f - 1);
 
 			if (!ExecutingSequence() && queuedSequences.Count > 0)
             {
-				PressButtons(queuedSequences.Dequeue());
+				PressButtons(queuedSequences.Dequeue(), f);
             }
 		}
 
@@ -500,7 +497,7 @@ namespace BizhawkRemotePlay
 
         private void maximumActionTime_ValueChanged(object sender, EventArgs e)
         {
-			systemState.MaxFrames = decimal.ToUInt32(nud_maximumActionTime.Value);
+			systemState.MaxFrames = decimal.ToInt32(nud_maximumActionTime.Value);
 			var ms = Utility.FramesToMilliseconds(systemState.MaxFrames, systemState.SystemFPS);
 			timeLabelMaxActFrames.Text = $"= {ms}ms | {ms / MILLIS_PER_SEC}s";
 
@@ -514,7 +511,7 @@ namespace BizhawkRemotePlay
 
         private void holdFramesDefault_ValueChanged(object sender, EventArgs e)
         {
-			systemState.HoldFrames = decimal.ToUInt32(nud_holdFramesDefault.Value);
+			systemState.HoldFrames = decimal.ToInt32(nud_holdFramesDefault.Value);
 			var ms = Utility.FramesToMilliseconds(systemState.HoldFrames, systemState.SystemFPS);
 			timeLabelHoldFrames.Text = $"= {ms}ms | {ms / MILLIS_PER_SEC}s";
 
@@ -525,7 +522,7 @@ namespace BizhawkRemotePlay
 
         private void pressFramesDefault_ValueChanged(object sender, EventArgs e)
         {
-			systemState.PressFrames = decimal.ToUInt32(nud_pressFramesDefault.Value);
+			systemState.PressFrames = decimal.ToInt32(nud_pressFramesDefault.Value);
 			var ms = Utility.FramesToMilliseconds(systemState.PressFrames, systemState.SystemFPS);
 			timeLabelPressFrames.Text = $"= {ms}ms | {ms / MILLIS_PER_SEC}s";
 
@@ -536,7 +533,7 @@ namespace BizhawkRemotePlay
 
         private void nud_RepDelay_ValueChanged(object sender, EventArgs e)
         {
-			systemState.DefaultRepetitionDelay = decimal.ToUInt32(nud_RepDelay.Value);
+			systemState.DefaultRepetitionDelay = decimal.ToInt32(nud_RepDelay.Value);
 			var ms = Utility.FramesToMilliseconds(systemState.DefaultRepetitionDelay, systemState.SystemFPS);
 			timeLabelRepeitionDelay.Text = $"= {ms}ms | {ms / MILLIS_PER_SEC}s";
 
@@ -547,7 +544,7 @@ namespace BizhawkRemotePlay
 
         private void maximumRepititions_ValueChanged(object sender, EventArgs e)
         {
-			systemState.MaxReps = decimal.ToUInt32(nud_maximumRepititions.Value);
+			systemState.MaxReps = decimal.ToInt32(nud_maximumRepititions.Value);
 			configFile.MaxReps = systemState.MaxReps;
 		}
 
@@ -555,7 +552,7 @@ namespace BizhawkRemotePlay
 
         private void sequenceDelay_ValueChanged(object sender, EventArgs e)
         {
-			systemState.DefaultSequenceDelay = decimal.ToUInt32(nud_sequenceDelay.Value);
+			systemState.DefaultSequenceDelay = decimal.ToInt32(nud_sequenceDelay.Value);
 			configFile.SequenceDelay = systemState.DefaultSequenceDelay;
 			var ms = Utility.FramesToMilliseconds(systemState.DefaultSequenceDelay, systemState.SystemFPS);
 			timeLabelSequenceDelay.Text = $"= {ms}ms | {ms / MILLIS_PER_SEC}s";
@@ -584,7 +581,6 @@ namespace BizhawkRemotePlay
 
             try
 			{
-                
                 text = File.ReadAllText(path);
             }
             catch { }
@@ -615,7 +611,7 @@ namespace BizhawkRemotePlay
 		/// <summary>
 		/// Form Closing event, do any cleanup and saving here
 		/// </summary>
-        private void BizhawkRemotePlay_FormClosing(object sender, System.Windows.Forms.FormClosingEventArgs e)
+        private void BizhawkRemotePlay_FormClosing(object sender, FormClosingEventArgs e)
         {
 			SaveConfigFile(ConfigFilePath, configFile);
         }

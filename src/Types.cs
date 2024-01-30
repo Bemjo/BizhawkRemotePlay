@@ -12,12 +12,13 @@ namespace BizhawkRemotePlay
         public List<string> TwitchChannels = new List<string>();
         public List<string> DiscordChannels = new List<string>();
 
-		public uint MaxActFrames = 4000;
-		public uint HoldFrames = 60;
-		public uint PressFrames = 10;
-		public uint RepetitionDelay = 120;
-		public uint MaxReps = 30;
-		public uint SequenceDelay = 30;
+		public int MaxActFrames = 4000;
+		public int HoldFrames = 60;
+		public int PressFrames = 10;
+		public int RepetitionDelay = 120;
+		public int MaxReps = 30;
+		public int SequenceDelay = 30;
+		public int QueueSize = 10;
 
 		public bool ChaosMode = false;
 		public bool QueueSequences = true;
@@ -33,56 +34,46 @@ namespace BizhawkRemotePlay
 
     public class State
 	{
-		public bool SupportsInput { get; set; }
-		public uint MaxReps { get; set; }
-		public uint MaxFrames { get; set; }
-		public uint PressFrames { get; set; }
-		public uint HoldFrames { get; set; }
-		public uint DefaultRepetitionDelay { get; set; }
-		public uint DefaultSequenceDelay { get; set; }
-		public double SystemFPS { get; set; }
+		public int MaxReps { get; set; }
+		public int MaxFrames { get; set; }
+		public int PressFrames { get; set; }
+		public int HoldFrames { get; set; }
+		public int DefaultRepetitionDelay { get; set; }
+		public int DefaultSequenceDelay { get; set; }
+		public float SystemFPS { get; set; }
+		public string System { get; set; }
 
-		private string _currentSystem;
-
-		public string CurrentSystem
-		{
-			get { return _currentSystem; }
-			set { _currentSystem = value; this.JoypadButtons = Utility.GetJoypadButtons(value); }
-		}
-
-		public HashSet<string> JoypadButtons { get; private set; }
+		public HashSet<string> JoypadButtons { get; set; } = new HashSet<string>();
 
 		public State(
-			bool supportsInput = false,
-			uint maxReps = 10,
-			uint maxFrames = 10,
-			uint pressFrames = 4,
-			uint holdFrames = 20,
-			uint defaultRepetitionDelay = 30,
-			uint defaultSequenceDelay = 30,
-			uint systemFPS = 60,
+			int maxReps = 10,
+			int maxFrames = 10,
+			int pressFrames = 4,
+			int holdFrames = 20,
+			int defaultRepetitionDelay = 30,
+			int defaultSequenceDelay = 30,
+			int systemFPS = 60,
 			string system = ""
 			)
 		{
-			this.SupportsInput = supportsInput;
-			this.MaxReps = maxReps;
-			this.MaxFrames = maxFrames;
-			this.PressFrames = pressFrames;
-			this.HoldFrames = holdFrames;
-			this.DefaultRepetitionDelay = defaultRepetitionDelay;
-			this.DefaultSequenceDelay = defaultSequenceDelay;
-			this.SystemFPS = systemFPS;
-			this._currentSystem = system;
-			this.JoypadButtons = Utility.GetJoypadButtons(system);
-		}
+			MaxReps = maxReps;
+			MaxFrames = maxFrames;
+			PressFrames = pressFrames;
+			HoldFrames = holdFrames;
+			DefaultRepetitionDelay = defaultRepetitionDelay;
+			DefaultSequenceDelay = defaultSequenceDelay;
+			SystemFPS = systemFPS;
+			System = system;
+
+        }
 	}
 
 	public readonly struct Repetitions
     {
-		public uint Reps { get; }
-		public uint Delay { get; }
+		public int Reps { get; }
+		public int Delay { get; }
 
-		public Repetitions(uint reps, uint delay)
+		public Repetitions(int reps, int delay)
         {
 			Reps = reps;
 			Delay = delay;
@@ -92,10 +83,10 @@ namespace BizhawkRemotePlay
 	public readonly struct ButtonCommand : IComparable, IEquatable<ButtonCommand>
 	{
 		public Repetitions Reps { get; }
-		public uint Duration { get; }
+		public int Duration { get; }
 		public string Button { get; }
 
-		public ButtonCommand(string button, uint duration, Repetitions reps)
+		public ButtonCommand(string button, int duration, Repetitions reps)
 		{
 			Button = button;
 			Duration = duration;
@@ -105,7 +96,9 @@ namespace BizhawkRemotePlay
 		public int CompareTo(object obj)
         {
 			if (obj == null)
-				return 1;
+			{
+				return -1;
+			}
 
 			ButtonCommand otherButton = (ButtonCommand)obj;
 			return Button.CompareTo(otherButton.Button);
@@ -127,12 +120,14 @@ namespace BizhawkRemotePlay
         }
     }
 
+
+
 	public readonly struct ButtonSequence
 	{
-		public uint CommandDelay { get; }
+		public int CommandDelay { get; }
 		public HashSet<ButtonCommand> Buttons { get; }
 
-		public ButtonSequence(uint delay, HashSet<ButtonCommand> btns)
+		public ButtonSequence(int delay, HashSet<ButtonCommand> btns)
 		{
 			CommandDelay = delay;
 			Buttons = btns;

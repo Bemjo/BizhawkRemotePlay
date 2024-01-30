@@ -870,7 +870,9 @@ namespace BizhawkRemotePlay
 			maximumActionTime_ValueChanged(null!, null!);
 			holdFramesDefault_ValueChanged(null!, null!);
 			pressFramesDefault_ValueChanged(null!, null!);
-		}
+            nud_RepDelay_ValueChanged(null!, null!);
+            sequenceDelay_ValueChanged(null!, null!);
+        }
 
 
 

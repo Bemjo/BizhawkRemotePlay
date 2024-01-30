@@ -248,7 +248,7 @@ namespace BizhawkRemotePlay
 
         private void button_JoinChannel_Click(object sender, EventArgs e)
         {
-            var channel = textBox_TwitchChannel.Text;
+            string channel = textBox_TwitchChannel.Text;
 
             JoinChannel(channel);
         }
@@ -257,7 +257,12 @@ namespace BizhawkRemotePlay
 
         private void JoinChannel(string channel, bool addToChannels = true)
         {
-            var chanLow = channel.ToLower();
+            if (channel.Length <= 3)
+            {
+                return;
+            }
+
+            string chanLow = channel.ToLower();
 
             // Exit if we've already joined this channel
             foreach (var item in listBox_JoinedChannels.Items)

@@ -8,21 +8,26 @@ using System.Text.RegularExpressions;
 namespace BizhawkRemotePlay
 {
     // Parses a string for control syntax, returning a dictionary of frame presses
-    class StringDecoder
+    public class StringDecoder
     {
-        public const char REP_SPLIT_CHAR = '|';
-        public const char REP_TIME_SPLIT_CHAR = '.';
-        public const char BTN_HOLD_SPLIT_CHAR = ':';
-        public const char BTN_SEQUENCE_SPLIT_CHAR = '-';
-
-        private readonly Regex syntaxFixRegex = new Regex($@"\s|\{REP_SPLIT_CHAR}{{2,}}|\{REP_TIME_SPLIT_CHAR}{{2,}}|\{BTN_HOLD_SPLIT_CHAR}{{2,}}|\{BTN_SEQUENCE_SPLIT_CHAR}{{2,}}");
+        private char RepetitionSplitChar;
+        private char RepetitionDelayChar;
+        private char ButtonDurationChar;
+        private char ButtonSequenceChar;
+        private Regex syntaxFixRegex;
         private State state;
 
 
 
-        public StringDecoder(State systemState)
+        public StringDecoder(State systemState, char repSplit = '|', char repDelay = '.', char buttonDuration = ':', char buttonSeq = '-')
         {
             state = systemState;
+            RepetitionSplitChar = repSplit;
+            RepetitionDelayChar = repDelay;
+            ButtonDurationChar = buttonDuration;
+            ButtonSequenceChar = buttonSeq;
+
+            syntaxFixRegex = new Regex($@"\s|\{RepetitionSplitChar}{{2,}}|\{RepetitionDelayChar}{{2,}}|\{ButtonDurationChar}{{2,}}|\{ButtonSequenceChar}{{2,}}");
         }
 
 
@@ -83,8 +88,7 @@ namespace BizhawkRemotePlay
                 }
             }
 
-            frameDelay = Math.Min(frameDelay, state.MaxFrames);
-
+            frameDelay = Math.Min(Math.Abs(frameDelay), state.MaxFrames);
             return true;
         }
 
@@ -118,7 +122,7 @@ namespace BizhawkRemotePlay
             bool success;
             int reps;
             int repDelay = state.DefaultRepetitionDelay;
-            var repsAndTimes = repStr.Split(REP_TIME_SPLIT_CHAR);
+            var repsAndTimes = repStr.Split(RepetitionDelayChar);
 
             // Parse the whole thing only if we can actually parse a number of reps from the string
             if (success = int.TryParse(repsAndTimes[0], out reps))
@@ -127,8 +131,14 @@ namespace BizhawkRemotePlay
                 if (repsAndTimes.Length >= 2)
                 {
                     if (!ParseTimings(repsAndTimes[1], out repDelay))
+                    {
                         repDelay = state.DefaultRepetitionDelay;
+                    }
                 }
+            }
+            else
+            {
+                reps = 1;
             }
 
             rep = new Repetitions(
@@ -138,6 +148,7 @@ namespace BizhawkRemotePlay
 
             return success;
         }
+
 
 
         /// <summary>
@@ -150,23 +161,16 @@ namespace BizhawkRemotePlay
         {
             Repetitions rep;
             int duration = state.PressFrames;
-            var btnAndReps = btnStr.Split(REP_SPLIT_CHAR);
-            var btnAndTiming = btnAndReps[0].Split(BTN_HOLD_SPLIT_CHAR);
+            var btnAndReps = btnStr.Split(RepetitionSplitChar);
+            var btnAndTiming = btnAndReps[0].Split(ButtonDurationChar);
             string btnName = btnAndTiming[0];
             string revBtnName = btnName.ToLower();
-
-            // Get our list of system specific aliases if defined
-            if (!state.ButtonAliases.TryGetValue(state.System, out IDictionary<string, string> aliases))
-            {
-                aliases = state.ButtonAliases[BizhawkRemotePlay.DEFAULT_SYSTEM_KEY];
-            }
-
             string realBtnName = revBtnName;
 
             // map the user input to a valid key if possible
-            if (aliases.ContainsKey(revBtnName))
+            if (state.ButtonAliases.ContainsKey(revBtnName))
             {
-                realBtnName = aliases[revBtnName];
+                realBtnName = state.ButtonAliases[revBtnName];
 
                 if (!state.JoypadButtons.Contains(realBtnName))
                 {
@@ -210,12 +214,17 @@ namespace BizhawkRemotePlay
             {
                 ParseTimings(btnAndTiming[1], out duration);
             }
+
             // There were no timings attached, let's take account of captilization of the button name to set duration
-            else
+            if (btnAndTiming.Length < 2 || duration < 1)
             {
                 if (char.ToUpper(btnName[0]) == btnName[0])
                 {
                     duration = state.HoldFrames;
+                }
+                else
+                {
+                    duration = state.PressFrames;
                 }
             }
 
@@ -233,19 +242,31 @@ namespace BizhawkRemotePlay
 
             var btnStr = sequenceGroups[0];
 
-            sequences.Add(new ButtonSequence(0, ParseButtons(btnStr)));
+            HashSet<ButtonCommand> parsedButtons = ParseButtons(btnStr);
 
-            for (int i = 1; i < sequenceGroups.Length - 1; i += 2)
+            if (parsedButtons.Count > 0)
             {
-                var timingStr = sequenceGroups[i];
-                btnStr = sequenceGroups[i + 1];
+                sequences.Add(new ButtonSequence(0, parsedButtons));
 
-                ParseTimings(timingStr, out int frameDelay);
+                for (int i = 1; i < sequenceGroups.Length - 1; i += 2)
+                {
+                    var timingStr = sequenceGroups[i];
+                    btnStr = sequenceGroups[i + 1];
 
-                sequences.Add(new ButtonSequence(frameDelay, ParseButtons(btnStr)));
+                    ParseTimings(timingStr, out int frameDelay);
+                    parsedButtons = ParseButtons(btnStr);
+
+                    if (parsedButtons.Count <= 0)
+                    {
+                        sequences.Clear();
+                        break;
+                    }
+
+                    sequences.Add(new ButtonSequence(frameDelay, parsedButtons));
+                }
             }
 
-            return true;
+            return sequences.Count > 0;
         }
     }
 }

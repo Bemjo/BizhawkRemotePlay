@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.NetworkInformation;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using BizHawk.Client.Common;
 using BizHawk.Client.EmuHawk;
@@ -106,9 +108,9 @@ So, it does the example from sequenced presses from above in full, before repeat
 namespace BizhawkRemotePlay
 {
     public interface IRemotePlayer
-	{
-		void HandleMessage(string service, string sender, string message);
-		string CommandPrefix(string message);
+    {
+        void HandleMessage(string service, string sender, string message);
+        string CommandPrefix(string message);
 
         T LoadConfigFile<T>(string path) where T : new();
         void SaveConfigFile<T>(string path, T config) where T : class;
@@ -116,40 +118,40 @@ namespace BizhawkRemotePlay
 
 
 
-	[ExternalTool("Remote Play")]
-	public partial class BizhawkRemotePlay : ToolFormBase, IExternalToolForm, IRemotePlayer
-	{
-		public const int MILLIS_PER_SEC = 1000;
-		public const int BUFFER_SIZE = 128;
+    [ExternalTool("Remote Play")]
+    public partial class BizhawkRemotePlay : ToolFormBase, IExternalToolForm, IRemotePlayer
+    {
+        public const int MILLIS_PER_SEC = 1000;
+        public const int BUFFER_SIZE = 128;
         public const string DEFAULT_SYSTEM_KEY = "default";
         public const string CONFIG_PATH = "ExternalTools/";
         public const string CONFIG_FILE_PATH = CONFIG_PATH + "remoteplay.json";
 
         protected override string WindowTitleStatic => "Remote Play";
 
-		public ApiContainer? _maybeAPIContainer { get; set; }
-		private ApiContainer APIs => _maybeAPIContainer!;
+        public ApiContainer? _maybeAPIContainer { get; set; }
+        private ApiContainer APIs => _maybeAPIContainer!;
 
-		private Dictionary<string, bool> pressedButtons = new Dictionary<string, bool>();
-		private Dictionary<int, Dictionary<string, bool>> frameButtonStates = new Dictionary<int, Dictionary<string, bool>>();
-		private Queue<List<ButtonSequence>> queuedSequences = new Queue<List<ButtonSequence>>();
+        private Dictionary<string, bool> pressedButtons = new Dictionary<string, bool>();
+        private Dictionary<int, Dictionary<string, bool>> frameButtonStates = new Dictionary<int, Dictionary<string, bool>>();
+        private Queue<List<ButtonSequence>> queuedSequences = new Queue<List<ButtonSequence>>();
 
-		private State systemState;
-		private StringDecoder decoder;
-		private InputProvidersForm servicesForm;
+        private State systemState;
+        private StringDecoder decoder;
+        private InputProvidersForm servicesForm;
 
-		public RemotePlayConfig RPConfig;
+        public RemotePlayConfig RPConfig;
 
-		public int? PadID { get; private set; } = null;
+        public int? PadID { get; private set; } = null;
 
-		public bool IsSystemValid { get; private set; } = false;
+        public bool IsSystemValid { get; private set; } = false;
 
         // Actual system FPS to calculate times from and from frame counts accurately 
         public static readonly IReadOnlyDictionary<string, float> SystemFrameRates = new Dictionary<string, float>()
-		{
-			{"NES", 60.0988f},
-			{"SNES", 60.0988f},
-			{"GBC", 59.7275f},
+        {
+            {"NES", 60.0988f},
+            {"SNES", 60.0988f},
+            {"GBC", 59.7275f},
             {"GB", 59.7275f},
             {"GBA", 59.7275f},
             {"GEN", 59.9275f},
@@ -158,303 +160,37 @@ namespace BizhawkRemotePlay
             {"MSX", 59.9275f},
             {"AppleII", 59.9275f},
             {"Coleco", 59.9275f},
-			{"A26", 59.9275f},
-			{"C64", 59.9275f},
-			{"NDS", 59.8261f}
+            {"A26", 59.9275f},
+            {"C64", 59.9275f},
+            {"NDS", 59.8261f}
         };
 
-		public static readonly string[] BannedButtons =
-		{
-			"power",
-			"reset",
-			"tilt x",
-			"tilt y",
-			"tilt z",
-			"close tray",
-			"open tray",
-			"light sensor",
+
+
+        public static readonly string[] BannedButtons =
+        {
+            "power",
+            "reset",
+            "tilt x",
+            "tilt y",
+            "tilt z",
+            "close tray",
+            "open tray",
+            "light sensor",
             "mode",
             "analog",
             "lidopen",
-			"lidclose",
-			"touch",
-			"x axis",
-			"y axis"
+            "lidclose",
+            "touch",
+            "x axis",
+            "y axis"
         };
 
-        private IDictionary<string, IDictionary<string, string>> systemButtonAliases = new Dictionary<string, IDictionary<string, string>>
-        {
-            { "N64", new Dictionary<string, string>{
-                {"up", "A Up" },
-                {"down", "A Down" },
-                {"left", "A Left" },
-                {"right", "A Right" },
-                {"u", "A Up" },
-                {"d", "A Down" },
-                {"l", "A Left" },
-                {"r", "A Right" },
-                {"do", "A Down" },
-                {"le", "A Left" },
-                {"ri", "A Right" },
-                {"dup", "DPad Up" },
-                {"ddown", "DPad Down" },
-                {"dleft", "DPad Left" },
-                {"dright", "DPad Right" },
-                {"du", "DPad Up" },
-                {"dd", "DPad Down" },
-                {"dl", "DPad Left" },
-                {"dr", "DPad Right" },
-                {"cup", "C Up" },
-                {"cdown", "C Down" },
-                {"cleft", "C Left" },
-                {"cright", "C Right" },
-                {"cu", "C Up" },
-                {"cd", "C Down" },
-                {"cl", "C Left" },
-                {"cr", "C Right" },
-                {"start", "Start" },
-                {"st", "Start" },
-                {"sta", "Start" },
-                {"a", "A" },
-                {"b", "B" },
-                {"z", "Z" },
-                {"lb", "L" },
-                {"rb", "R" },
-                {"l1", "L" },
-                {"r1", "R" },
-            }},
-            { "PSX", new Dictionary<string, string>{
-                {"up", "Up" },
-                {"down", "Down" },
-                {"left", "Left" },
-                {"right", "Right" },
-                {"u", "Up" },
-                {"d", "Down" },
-                {"do", "Down" },
-                {"dw", "Down" },
-                {"l", "Left" },
-                {"r", "right" },
-                {"le", "Left" },
-                {"lf", "Left" },
-                {"lef", "Left" },
-                {"ri", "Right" },
-                {"rig", "Right" },
-                {"dup", "D-Pad Up" },
-                {"ddown", "D-Pad Down" },
-                {"dleft", "D-Pad Left" },
-                {"dright", "D-Pad Right" },
-                {"du", "D-Pad Up" },
-                {"dd", "D-Pad Down" },
-                {"dl", "D-Pad Left" },
-                {"dr", "D-Pad Right" },
-                {"x", "X" },
-                {"ex", "X" },
-                {"△", "△" },
-                {"□", "□" },
-                {"○", "○" },
-                {"o", "○" },
-                {"t", "△" },
-                {"s", "□" },
-                {"c", "○" },
-                {"tr", "△" },
-                {"sq", "□" },
-                {"ci", "○" },
-                {"tri", "△" },
-                {"squ", "□" },
-                {"cir", "○" },
-                {"lb", "L1" },
-                {"rb", "R1" },
-                {"l1", "L1" },
-                {"r1", "R1" },
-                {"l2", "L2" },
-                {"r2", "R2" },
-                {"lt", "L2" },
-                {"rt", "R2" },
-                {"l3", "Left Stick" },
-                {"r3", "Right Stick" },
-                {"start", "Start" },
-                {"select", "Select" },
-                {"st", "Start" },
-                {"se", "Select" },
-                {"sta", "Start" },
-                {"sel", "Select" },
-            }},
-            { "SNES", new Dictionary<string, string>{
-                {"up", "Up" },
-                {"down", "Down" },
-                {"left", "Left" },
-                {"right", "Right" },
-                {"u", "Up" },
-                {"d", "Down" },
-                {"do", "Down" },
-                {"dw", "Down" },
-                {"l", "Left" },
-                {"r", "right" },
-                {"le", "Left" },
-                {"lf", "Left" },
-                {"lef", "Left" },
-                {"ri", "Right" },
-                {"rig", "Right" },
-                {"start", "Start" },
-                {"select", "Select" },
-                {"st", "Start" },
-                {"se", "Select" },
-                {"sta", "Start" },
-                {"sel", "Select" },
-                {"a", "A" },
-                {"b", "B" },
-                {"x", "X" },
-                {"y", "Y" },
-                {"lb", "L" },
-                {"rb", "R" },
-                {"l1", "L" },
-                {"r1", "R" },
-            }},
-            { "GBA", new Dictionary<string, string>{
-                {"up", "Up" },
-                {"down", "Down" },
-                {"left", "Left" },
-                {"right", "Right" },
-                {"u", "Up" },
-                {"d", "Down" },
-                {"do", "Down" },
-                {"dw", "Down" },
-                {"l", "Left" },
-                {"r", "right" },
-                {"le", "Left" },
-                {"lf", "Left" },
-                {"lef", "Left" },
-                {"ri", "Right" },
-                {"rig", "Right" },
-                {"start", "Start" },
-                {"select", "Select" },
-                {"st", "Start" },
-                {"se", "Select" },
-                {"sta", "Start" },
-                {"sel", "Select" },
-                {"a", "A" },
-                {"b", "B" },
-                {"lb", "L" },
-                {"rb", "R" },
-                {"l1", "L" },
-                {"r1", "R" },
-            }},
-            { "GBC", new Dictionary<string, string>{
-                {"up", "Up" },
-                {"down", "Down" },
-                {"left", "Left" },
-                {"right", "Right" },
-                {"u", "Up" },
-                {"d", "Down" },
-                {"do", "Down" },
-                {"dw", "Down" },
-                {"l", "Left" },
-                {"r", "right" },
-                {"le", "Left" },
-                {"lf", "Left" },
-                {"lef", "Left" },
-                {"ri", "Right" },
-                {"rig", "Right" },
-                {"start", "Start" },
-                {"select", "Select" },
-                {"st", "Start" },
-                {"se", "Select" },
-                {"sta", "Start" },
-                {"sel", "Select" },
-                {"a", "A" },
-                {"b", "B" },
-            }},
-            { "GB",new Dictionary<string, string>{
-                {"up", "Up" },
-                {"down", "Down" },
-                {"left", "Left" },
-                {"right", "Right" },
-                {"u", "Up" },
-                {"d", "Down" },
-                {"do", "Down" },
-                {"dw", "Down" },
-                {"l", "Left" },
-                {"r", "right" },
-                {"le", "Left" },
-                {"lf", "Left" },
-                {"lef", "Left" },
-                {"ri", "Right" },
-                {"rig", "Right" },
-                {"start", "Start" },
-                {"select", "Select" },
-                {"st", "Start" },
-                {"se", "Select" },
-                {"sta", "Start" },
-                {"sel", "Select" },
-                {"a", "A" },
-                {"b", "B" },
-            }},
-            { "NES",new Dictionary<string, string>{
-                {"up", "Up" },
-                {"down", "Down" },
-                {"left", "Left" },
-                {"right", "Right" },
-                {"u", "Up" },
-                {"d", "Down" },
-                {"do", "Down" },
-                {"dw", "Down" },
-                {"l", "Left" },
-                {"r", "right" },
-                {"le", "Left" },
-                {"lf", "Left" },
-                {"lef", "Left" },
-                {"ri", "Right" },
-                {"rig", "Right" },
-                {"start", "Start" },
-                {"select", "Select" },
-                {"st", "Start" },
-                {"se", "Select" },
-                {"sta", "Start" },
-                {"sel", "Select" },
-                {"a", "A" },
-                {"b", "B" },
-            }},
-            { DEFAULT_SYSTEM_KEY, new Dictionary<string, string>{
-                {"up", "Up" },
-                {"down", "Down" },
-                {"left", "Left" },
-                {"right", "Right" },
-                {"a", "A" },
-                {"b", "B" },
-                {"c", "C" },
-                {"x", "X" },
-                {"y", "Y" },
-                {"z", "Z" },
-                {"lb", "L" },
-                {"rb", "R" },
-                {"l1", "L" },
-                {"r1", "R" },
-                {"start", "Start" },
-                {"select", "Select" },
-			    // aliases
-                {"star", "Start" },
-                {"st", "Start" },
-                {"sta", "Start" },
-                {"str", "Start" },
-                {"sel", "Select" },
-                {"sl", "Select" },
-                {"u", "Up" },
-                {"d", "Down" },
-                {"do", "Down" },
-                {"dw", "Down" },
-                {"l", "Left" },
-                {"r", "right" },
-                {"le", "Left" },
-                {"lf", "Left" },
-                {"lef", "Left" },
-                {"ri", "Right" },
-                {"rig", "Right" },
-            }},
-        };
+
 
         public BizhawkRemotePlay()
         {
-			InitializeComponent();
+            InitializeComponent();
             RPConfig = LoadConfigFile<RemotePlayConfig>(CONFIG_FILE_PATH);
 
             systemState = new State(
@@ -464,79 +200,79 @@ namespace BizhawkRemotePlay
                 RPConfig.HoldFrames,
                 RPConfig.RepetitionDelay,
                 RPConfig.SequenceDelay
-			);
+            );
 
             ReloadUI();
 
-            decoder = new StringDecoder(systemState);
+            decoder = new StringDecoder(systemState, RPConfig.RepetitionSplitChar, RPConfig.RepetitionDelayChar, RPConfig.ButtonDurationChar, RPConfig.ButtonSequenceChar);
 
-			TwitchService ts = new TwitchService(this);
+            TwitchService ts = new TwitchService(this);
             DiscordService ds = new DiscordService(this);
 
-			servicesForm = new InputProvidersForm(this, new IService[]{ ts, ds });
+            servicesForm = new InputProvidersForm(this, new IService[] { ts, ds });
 
-			servicesForm.InitializeConnections();
+            servicesForm.InitializeConnections();
         }
 
 
 
-		private void ReloadUI()
-		{
-			nud_maximumActionTime.Value = RPConfig.MaxActFrames;
-			nud_holdFramesDefault.Value = RPConfig.HoldFrames;
-			nud_pressFramesDefault.Value = RPConfig.PressFrames;
-			nud_maximumRepititions.Value = RPConfig.MaxReps;
-			nud_RepDelay .Value = RPConfig.RepetitionDelay;
-			nud_sequenceDelay.Value = RPConfig.SequenceDelay;
-			nud_QueueSize.Value = RPConfig.QueueSize;
-
-			radio_Chaos.Checked = RPConfig.ChaosMode;
-			radio_Queue.Checked = RPConfig.QueueSequences;
-
-			UIRecalculateTimeLabels();
-        }
-
-
-		
-		public string CommandPrefix(string command)
-		{
-			string prefix = "bt";
-
-			if (command.CompareTo(RPConfig.ClearCommand) == 0)
-			{
-				prefix = "cl";
-			}
-
-			return prefix;
-		}
-
-
-
-		public bool ExecutingSequence()
+        private void ReloadUI()
         {
-			return frameButtonStates.Count > 0;
+            nud_maximumActionTime.Value = RPConfig.MaxActFrames;
+            nud_holdFramesDefault.Value = RPConfig.HoldFrames;
+            nud_pressFramesDefault.Value = RPConfig.PressFrames;
+            nud_maximumRepititions.Value = RPConfig.MaxReps;
+            nud_RepDelay.Value = RPConfig.RepetitionDelay;
+            nud_sequenceDelay.Value = RPConfig.SequenceDelay;
+            nud_QueueSize.Value = RPConfig.QueueSize;
+
+            radio_Chaos.Checked = RPConfig.ChaosMode;
+            radio_Queue.Checked = RPConfig.QueueSequences;
+
+            UIRecalculateTimeLabels();
         }
 
 
 
-		public void HandleMessage(string service, string sender, string msg)
+        public string CommandPrefix(string command)
         {
-			if (!IsSystemValid)
-			{
-				return;
-			}
+            string prefix = "bt";
 
-			var i = msg.IndexOf(':');
-			// We expect this to be in position 3
-			if (i != 2)
+            if (command.CompareTo(RPConfig.ClearCommand) == 0)
             {
-				return;
+                prefix = "cl";
             }
 
-			var cmd = msg.Substring(0, i);
-			msg = msg.Substring(i+1);
+            return prefix;
+        }
 
-			switch (cmd.ToLower())
+
+
+        public bool ExecutingSequence()
+        {
+            return frameButtonStates.Count > 0;
+        }
+
+
+
+        public void HandleMessage(string service, string sender, string msg)
+        {
+            if (!IsSystemValid)
+            {
+                return;
+            }
+
+            var i = msg.IndexOf(':');
+            // We expect this to be in position 3
+            if (i != 2)
+            {
+                return;
+            }
+
+            var cmd = msg.Substring(0, i);
+            msg = msg.Substring(i + 1);
+
+            switch (cmd.ToLower())
             {
                 // Clear Stored Inputs
                 case "cl":
@@ -545,42 +281,42 @@ namespace BizhawkRemotePlay
 
                 // Handle buttons command
                 default:
-					if (!decoder.ValidateButtonString(msg, out List<ButtonSequence> sequence))
-					{
-						return;
-					}
-
-					bool addInput = false;
-
-					if (!ExecutingSequence() || radio_Chaos.Checked)
-					{
-						PressButtons(sequence, APIs.Emulation.FrameCount() + 1);
-						addInput = true;
-
-                    }
-					else if (queuedSequences.Count < nud_QueueSize.Value)
-					{
-						queuedSequences.Enqueue(sequence);
-						addInput = true;
+                    if (!decoder.ValidateButtonString(msg, out List<ButtonSequence> sequence))
+                    {
+                        return;
                     }
 
-					if (addInput)
-					{
-						Invoke((MethodInvoker)delegate
-						{
-							var lvi = list_Inputs.Items.Insert(0, service);
-							lvi.SubItems.Add(sender);
-							lvi.SubItems.Add(msg);
+                    bool addInput = false;
 
-							if (list_Inputs.Items.Count >= 100)
-							{
+                    if (!ExecutingSequence() || radio_Chaos.Checked)
+                    {
+                        PressButtons(sequence, APIs.Emulation.FrameCount() + 1);
+                        addInput = true;
+
+                    }
+                    else if (queuedSequences.Count < nud_QueueSize.Value)
+                    {
+                        queuedSequences.Enqueue(sequence);
+                        addInput = true;
+                    }
+
+                    if (addInput)
+                    {
+                        Invoke((MethodInvoker)delegate
+                        {
+                            var lvi = list_Inputs.Items.Insert(0, service);
+                            lvi.SubItems.Add(sender);
+                            lvi.SubItems.Add(msg);
+
+                            if (list_Inputs.Items.Count >= 100)
+                            {
                                 list_Inputs.Items.RemoveAt(list_Inputs.Items.Count - 1);
-							}
-						});
-					}
+                            }
+                        });
+                    }
                     break;
             }
-		}
+        }
 
 
 
@@ -600,79 +336,80 @@ namespace BizhawkRemotePlay
         /// <param name="sequence"></param>
         private void PressButtons(List<ButtonSequence> sequence, int sequenceStart)
         {
-			foreach (var seq in sequence)
+            foreach (var seq in sequence)
             {
-				int sequenceDuration = 0;
+                int sequenceDuration = 0;
 
-				sequenceStart += seq.CommandDelay;
+                sequenceStart += seq.CommandDelay;
 
-				foreach (ButtonCommand btns in seq.Buttons)
+                foreach (ButtonCommand btns in seq.Buttons)
                 {
-					int delta = btns.Duration + btns.Reps.Delay;
-					int startFrame = sequenceStart - delta;
+                    int delta = btns.Duration + btns.Reps.Delay;
+                    int startFrame = sequenceStart - delta;
                     int endFrame = btns.Duration + sequenceStart - delta;
 
-					for (int i = 1; i <= btns.Reps.Reps; ++i)
-					{
-						startFrame += delta;
-						endFrame += delta;
+                    for (int i = 1; i <= btns.Reps.Reps; ++i)
+                    {
+                        startFrame += delta;
+                        endFrame += delta;
 
-						if (frameButtonStates.ContainsKey(startFrame))
-						{
-							var d = frameButtonStates[startFrame];
+                        if (frameButtonStates.ContainsKey(startFrame))
+                        {
+                            var d = frameButtonStates[startFrame];
 
-							if (d.ContainsKey(btns.Button))
+                            if (d.ContainsKey(btns.Button))
                             {
-								d[btns.Button] = true;
-							}
-							else
+                                d[btns.Button] = true;
+                            }
+                            else
                             {
-								d.Add(btns.Button, true);
-							}
-						}
-						else
-						{
-							frameButtonStates.Add(startFrame, new Dictionary<string, bool>() { { btns.Button, true } });
-						}
+                                d.Add(btns.Button, true);
+                            }
+                        }
+                        else
+                        {
+                            frameButtonStates.Add(startFrame, new Dictionary<string, bool>() { { btns.Button, true } });
+                        }
 
-						if (frameButtonStates.ContainsKey(endFrame))
-						{
-							var d = frameButtonStates[endFrame];
+                        if (frameButtonStates.ContainsKey(endFrame))
+                        {
+                            var d = frameButtonStates[endFrame];
 
-							if (d.ContainsKey(btns.Button))
-							{
-								d[btns.Button] = false;
-							}
-							else
-							{
-								d.Add(btns.Button, false);
-							}
-						}
-						else
-						{
-							frameButtonStates.Add(endFrame, new Dictionary<string, bool>() { { btns.Button, false } });
-						}
-					}
+                            if (d.ContainsKey(btns.Button))
+                            {
+                                d[btns.Button] = false;
+                            }
+                            else
+                            {
+                                d.Add(btns.Button, false);
+                            }
+                        }
+                        else
+                        {
+                            frameButtonStates.Add(endFrame, new Dictionary<string, bool>() { { btns.Button, false } });
+                        }
+                    }
 
-					sequenceDuration = Math.Max(sequenceDuration, endFrame - sequenceStart);
-				}
+                    sequenceDuration = Math.Max(sequenceDuration, endFrame - sequenceStart);
+                }
 
-				sequenceStart += sequenceDuration;
-			}
-		}
+                sequenceStart += sequenceDuration;
+            }
+        }
 
 
 
         Dictionary<string, bool> GetJoypadButtons(int? padID)
-		{
-			return ((Dictionary<string, object>)APIs.Joypad.Get(padID)).Where(o => !BannedButtons.Contains(o.Key.ToLower())).ToDictionary
-				(
-					o => {
-						return o.Key.RemovePrefix("p1 ").RemovePrefix("P1 ");
-					},
-					_ => false
-				);
+        {
+            return ((Dictionary<string, object>)APIs.Joypad.Get(padID)).Where(o => !BannedButtons.Contains(o.Key.ToLower())).ToDictionary
+                (
+                    o => {
+                        return o.Key.RemovePrefix("p1 ").RemovePrefix("P1 ");
+                    },
+                    _ => false
+                );
         }
+
 
 
         /// <summary>
@@ -681,9 +418,9 @@ namespace BizhawkRemotePlay
         /// </summary>
         public override void Restart()
         {
-			var gameInfo = APIs.Emulation.GetGameInfo();
+            var gameInfo = APIs.Emulation.GetGameInfo();
 
-			IsSystemValid = gameInfo != null && gameInfo.System.Length > 0 && gameInfo.System.CompareTo("NULL") != 0;
+            IsSystemValid = gameInfo != null && gameInfo.System.Length > 0 && gameInfo.System.CompareTo("NULL") != 0;
 
             list_Aliases.Items.Clear();
             cbox_Button.Items.Clear();
@@ -692,14 +429,14 @@ namespace BizhawkRemotePlay
             pressedButtons.Clear();
 
             if (IsSystemValid)
-			{
-				// Find the correct pad we can use, and get a sanitized list of non-banned joypad buttons
-				PadID = 1;
-				Dictionary<string, bool> buttons = GetJoypadButtons(PadID);
+            {
+                // Find the correct pad we can use, and get a sanitized list of non-banned joypad buttons
+                PadID = 1;
+                Dictionary<string, bool> buttons = GetJoypadButtons(PadID);
 
-				if (buttons.Count <= 0)
-				{
-					PadID = null;
+                if (buttons.Count <= 0)
+                {
+                    PadID = null;
                     buttons = GetJoypadButtons(PadID);
                 }
 
@@ -718,13 +455,13 @@ namespace BizhawkRemotePlay
                 Utility.WriteLine($"Found controls for system {systemState.System}");
                 Utility.WriteLine($"\t{systemState.JoypadButtons}");
 
-				if (!SystemFrameRates.TryGetValue(gameInfo.System, out float systemFPS))
-				{
-					systemState.SystemFPS = ((gameInfo.Region?.ToLower().CompareTo("PAL") ?? 1) == 0) ? 50 : 60;
-				}
-				else
+                if (!SystemFrameRates.TryGetValue(gameInfo.System, out float systemFPS))
                 {
-					systemState.SystemFPS = systemFPS;
+                    systemState.SystemFPS = ((gameInfo.Region?.ToLower().CompareTo("PAL") ?? 1) == 0) ? 50 : 60;
+                }
+                else
+                {
+                    systemState.SystemFPS = systemFPS;
                 }
 
                 cbox_Button.Items.AddRange(keys);
@@ -756,110 +493,66 @@ namespace BizhawkRemotePlay
 
         protected override void FastUpdateBefore()
         {
-			UpdateBefore();
-		}
+            UpdateBefore();
+        }
 
 
 
         protected override void UpdateBefore()
-		{
-			// Just don't bother if the joypad functions aren't going to work
-			if (!IsSystemValid)
-			{
-				return;
-			}
+        {
+            // Just don't bother if the joypad functions aren't going to work
+            if (!IsSystemValid)
+            {
+                return;
+            }
 
             // Change button states that are queued to be changed this frame
             if (frameButtonStates.TryGetValue(APIs.Emulation.FrameCount(), out Dictionary<string, bool> frameStateChange))
-			{
-				foreach (var state in frameStateChange)
+            {
+                foreach (var state in frameStateChange)
                 {
-					pressedButtons[state.Key] = state.Value;
+                    pressedButtons[state.Key] = state.Value;
                 }
-			}
+            }
 
-			APIs.Joypad.Set(pressedButtons, PadID);
-		}
+            APIs.Joypad.Set(pressedButtons, PadID);
+        }
 
 
 
         protected override void FastUpdateAfter()
         {
-			UpdateAfter();
-		}
+            UpdateAfter();
+        }
 
 
 
         protected override void UpdateAfter()
         {
-			if (!IsSystemValid)
-			{
-				return;
-			}
+            if (!IsSystemValid)
+            {
+                return;
+            }
 
-			int f = APIs.Emulation.FrameCount();
+            int f = APIs.Emulation.FrameCount();
             frameButtonStates.Remove(f - 1);
 
-			if (!ExecutingSequence() && queuedSequences.Count > 0)
+            if (!ExecutingSequence() && queuedSequences.Count > 0)
             {
-				PressButtons(queuedSequences.Dequeue(), f);
+                PressButtons(queuedSequences.Dequeue(), f);
             }
-		}
+        }
+
 
 
         /// <summary>
-        /// RebuiConcatenates 
+        /// Concatentes the auto-created system aliases, with the user supplied aliases
         /// </summary>
         private void RebuildAliases(string system)
         {
-            if (system.Length <= 0)
-            {
-                return;
-            }    
+            RPConfig.Aliases.TryGetValue(system, out IDictionary<string, string> userAliases);
 
-            bool hasSystem;
-
-            // Get our current aliases, and check to see if this system has been defined yet in our state aliases
-            if (hasSystem = systemState.ButtonAliases.TryGetValue(system, out IDictionary<string, string> stateAliases))
-            {
-                stateAliases.Clear();
-            }
-            else
-            {
-                stateAliases = new Dictionary<string, string>();
-            }
-
-            IDictionary<string, string> outAliases;
-
-            // Add the system specific default aliases if they're defined
-            if (systemButtonAliases.TryGetValue(system, out outAliases))
-            {
-                stateAliases.AddRange(outAliases);
-            }
-            else
-            {
-                // find 
-                if (systemButtonAliases.TryGetValue(DEFAULT_SYSTEM_KEY, out outAliases))
-                {
-                    stateAliases.AddRange(outAliases);
-                }
-            }
-
-            if (RPConfig.Aliases.TryGetValue(system, out outAliases))
-            {
-                foreach (var alias in outAliases)
-                {
-                    if (!stateAliases.ContainsKey(alias.Key))
-                    {
-                        stateAliases.Add(alias);
-                    }
-                }
-            }
-
-            if (!hasSystem)
-            {
-                systemState.ButtonAliases.Add(system, stateAliases);
-            }
+            systemState.RebuildAliases(userAliases);
         }
 
 
@@ -1016,17 +709,8 @@ namespace BizhawkRemotePlay
 
             string userText = tbox_ButtonAlias.Text.Trim().Replace(" ", "").ToLower();
 
-            // try and get the system bindings, bail if we can't
-            if (!systemButtonAliases.TryGetValue(systemState.System, out IDictionary<string, string> sysAliases))
-            {
-                if (!systemButtonAliases.TryGetValue(DEFAULT_SYSTEM_KEY, out sysAliases))
-                {
-                    return;
-                }
-            }
-
             // Bail if we conflict with an existing system binding
-            if (sysAliases.ContainsKey(userText))
+            if (systemState.ButtonAliases.ContainsKey(userText))
             {
                 return;
             }

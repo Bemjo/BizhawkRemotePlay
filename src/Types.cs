@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -7,7 +8,7 @@ using System.Text.RegularExpressions;
 
 namespace BizhawkRemotePlay
 {
-    public class RemotePlayConfig
+    public class State
     {
         public char RepetitionSplitChar = '|';
         public char RepetitionDelayChar = '.';
@@ -20,7 +21,47 @@ namespace BizhawkRemotePlay
         public IList<string> DiscordChannels = new List<string>();
 		public IDictionary<string, IDictionary<string, string>> Aliases = new Dictionary<string, IDictionary<string, string>>();
 
-		public int MaxActFrames = 4000;
+        // Remaps specific buttons from Bizhawks cores, to more common aliases internally
+        public IDictionary<string, string[]> InternalAliasRemappings = new Dictionary<string, string[]>
+        {
+            { "aup", new [] {"up"} },
+            { "adown", new [] {"down" } },
+            { "aleft", new [] {"left"} },
+            { "aright", new [] {"right"} },
+            { "dpadup", new[] { "dup" } },
+            { "dpaddown", new[] { "ddown" } },
+            { "dpadleft", new[] { "dleft" } },
+            { "dpadright", new[] { "dright" } },
+            { "dpadu", new[] { "dup" } },
+            { "dpadd", new[] { "ddown" } },
+            { "dpadl", new[] { "dleft" } },
+            { "dpadr", new[] { "dright" } },
+            { "l", new[] { "l1", "lb" } },
+            { "r", new[] { "r1", "rb" } },
+            { "△", new[] { "triangle" } },
+            { "□", new[] { "square" } },
+            { "○", new[] { "o", "circle" } },
+        };
+
+        // Prevents certain bindings with prefixes from going down to too few letters
+        public IDictionary<string, int> GamepadAliasMinLengths = new Dictionary<string, int>
+        {
+            { "cup", 2},
+            { "cdown", 2},
+            { "cleft", 2},
+            { "cright", 2},
+            { "select", 2},
+            { "dpadup", 2},
+            { "dpaddown", 2},
+            { "dpadleft", 2},
+            { "dpadright", 2},
+            { "dpadu", 2},
+            { "dpadd", 2},
+            { "dpadl", 2},
+            { "dpadr", 2},
+        };
+
+        public int MaxFrames = 4000;
 		public int HoldFrames = 120;
 		public int PressFrames = 10;
 		public int RepetitionDelay = 6;
@@ -36,47 +77,18 @@ namespace BizhawkRemotePlay
         public string TwitchUsername = string.Empty;
         public string TwitchToken = string.Empty;
         public string DiscordToken = string.Empty;
-    }
 
+        [JsonIgnore]
+        public float SystemFPS = 60;
 
+        [JsonIgnore]
+        public string System = "";
 
-    public class State
-	{
-		public int MaxReps { get; set; }
-		public int MaxFrames { get; set; }
-		public int PressFrames { get; set; }
-		public int HoldFrames { get; set; }
-		public int DefaultRepetitionDelay { get; set; }
-		public int DefaultSequenceDelay { get; set; }
-		public float SystemFPS { get; set; }
-		public string System { get; set; }
+        [JsonIgnore]
+        public IDictionary<string, string> ButtonAliases { get; set; } = new Dictionary<string, string>();
 
-		public IDictionary<string, string> ButtonAliases { get; set; } = new Dictionary<string, string>();
-
-		public HashSet<string> JoypadButtons { get; set; } = new HashSet<string>();
-
-
-
-		public State(
-            int maxReps = 10,
-			int maxFrames = 9001,
-			int pressFrames = 4,
-			int holdFrames = 20,
-			int defaultRepetitionDelay = 30,
-			int defaultSequenceDelay = 30,
-			int systemFPS = 60,
-			string system = ""
-            )
-		{
-            MaxReps = maxReps;
-			MaxFrames = maxFrames;
-			PressFrames = pressFrames;
-			HoldFrames = holdFrames;
-			DefaultRepetitionDelay = defaultRepetitionDelay;
-			DefaultSequenceDelay = defaultSequenceDelay;
-			SystemFPS = systemFPS;
-			System = system;
-        }
+        [JsonIgnore]
+        public HashSet<string> JoypadButtons { get; set; } = new HashSet<string>();
 
 
 
@@ -139,11 +151,12 @@ namespace BizhawkRemotePlay
 
 
 
-        public void RebuildAliases(IDictionary<string, string>? userAliases = null)
+        public void RebuildAliases()
 		{
             Regex allowList = new Regex(@"[△X□○]");
             Regex sanitizer = new Regex(@"\W");
-            Dictionary<string, string> aliases = new Dictionary<string, string>();
+            IDictionary<string, string> aliases = new Dictionary<string, string>();
+            Aliases.TryGetValue(System, out IDictionary<string, string> userAliases);
 
             try
             {
@@ -152,58 +165,22 @@ namespace BizhawkRemotePlay
                     {
                         if (!allowList.Match(o).Success)
                         {
-                            return sanitizer.Replace(o, "").ToLower(); ;
+                            return sanitizer.Replace(o, "").ToLower();
                         }
                         return o.ToLower();
                     },
                     o => o
                 );
             }
-            catch (ArgumentException)
+            catch (ArgumentException ex)
             {
-                Utility.WriteLine("Failed to auto-parse aliases from system controls. At least 2 of the controls are unique symbols that I cannot parse correctly. Please file an issue on the github repo with the name of the System you are trying to run");
+                Utility.Write("Error: ");
+                Utility.WriteLine(ex);
+                Utility.WriteLine("Failed to auto-parse aliases from system controls. At least 2 of the controls are unique symbols that I cannot parse correctly. Please file an issue on the github repo with the name of the System you are trying to run.");
                 return;
             }
 
-            ButtonAliases = BuildAliases(aliases, userAliases,
-                new Dictionary<string, string[]>
-                {
-                    { "aup", new [] {"up"} },
-                    { "adown", new [] {"down" } },
-                    { "aleft", new [] {"left"} },
-                    { "aright", new [] {"right"} },
-                    { "dpadup", new[] { "dup" } },
-                    { "dpaddown", new[] { "ddown" } },
-                    { "dpadleft", new[] { "dleft" } },
-                    { "dpadright", new[] { "dright" } },
-                    { "dpadu", new[] { "dup" } },
-                    { "dpadd", new[] { "ddown" } },
-                    { "dpadl", new[] { "dleft" } },
-                    { "dpadr", new[] { "dright" } },
-                    { "l", new[] { "l1", "lb" } },
-                    { "r", new[] { "r1", "rb" } },
-                    { "△", new[] { "triangle" } },
-                    { "□", new[] { "square" } },
-                    { "○", new[] { "o", "circle" } },
-                    //{ "X", new[] { "x" } },
-                },
-                new Dictionary<string, int>
-                {
-                    {"cup", 2},
-                    {"cdown", 2},
-                    {"cleft", 2},
-                    {"cright", 2},
-                    {"select", 2},
-                    { "dpadup", 2},
-                    { "dpaddown", 2},
-                    { "dpadleft", 2},
-                    { "dpadright", 2},
-                    { "dpadu", 2},
-                    { "dpadd", 2},
-                    { "dpadl", 2},
-                    { "dpadr", 2},
-                }
-            );
+            ButtonAliases = BuildAliases(aliases, userAliases, InternalAliasRemappings, GamepadAliasMinLengths);
         }
 
 
@@ -214,8 +191,8 @@ namespace BizhawkRemotePlay
 					$"MaxFrames {MaxFrames}\n" +
 					$"PressFrames {PressFrames}\n" +
 					$"HoldFrames {HoldFrames}\n" +
-					$"DefaultRepetitionDelay {DefaultRepetitionDelay}\n" +
-					$"DefaultSequenceDelay {DefaultSequenceDelay}\n" +
+					$"DefaultRepetitionDelay {RepetitionDelay}\n" +
+					$"DefaultSequenceDelay {SequenceDelay}\n" +
 					$"SystemFPS {SystemFPS}\n" +
 					$"System {System}";
         }

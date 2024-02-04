@@ -27,7 +27,7 @@ namespace Tests
                 PressFrames = pressFrames,
                 HoldFrames = holdFrames,
                 MaxReps = maxReps,
-                DefaultRepetitionDelay = repDelay,
+                RepetitionDelay = repDelay,
                 JoypadButtons = new HashSet<string> { "A", "L1", "Start" },
                 ButtonAliases = new Dictionary<string, string>
                 {

@@ -6,7 +6,7 @@ Remote control tool for bizhawk, allows various services to send text command se
 * Discord Channels  
 
 ## Installation
-Copy the Bizhawk folder over your local copy of Bizhawk.  
+Copy this into your Bizhawk installation folder.  
 It places this plugin into Bizhawk/ExternalTools and required library DLLs in Bizhawk/dll  
 
 ## API Keys

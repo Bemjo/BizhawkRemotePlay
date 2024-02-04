@@ -2,12 +2,9 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net.NetworkInformation;
-using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using BizHawk.Client.Common;
 using BizHawk.Client.EmuHawk;
-using BizHawk.Common.CollectionExtensions;
 using BizHawk.Common.StringExtensions;
 using Newtonsoft.Json;
 
@@ -105,6 +102,7 @@ So, it does the example from sequenced presses from above in full, before repeat
  */
 
 
+
 namespace BizhawkRemotePlay
 {
     public interface IRemotePlayer
@@ -122,8 +120,6 @@ namespace BizhawkRemotePlay
     public partial class BizhawkRemotePlay : ToolFormBase, IExternalToolForm, IRemotePlayer
     {
         public const int MILLIS_PER_SEC = 1000;
-        public const int BUFFER_SIZE = 128;
-        public const string DEFAULT_SYSTEM_KEY = "default";
         public const string CONFIG_PATH = "ExternalTools/";
         public const string CONFIG_FILE_PATH = CONFIG_PATH + "remoteplay.json";
 
@@ -136,11 +132,9 @@ namespace BizhawkRemotePlay
         private Dictionary<int, Dictionary<string, bool>> frameButtonStates = new Dictionary<int, Dictionary<string, bool>>();
         private Queue<List<ButtonSequence>> queuedSequences = new Queue<List<ButtonSequence>>();
 
-        private State systemState;
+        public State SystemState { get; private set; }
         private StringDecoder decoder;
         private InputProvidersForm servicesForm;
-
-        public RemotePlayConfig RPConfig;
 
         public int? PadID { get; private set; } = null;
 
@@ -164,8 +158,6 @@ namespace BizhawkRemotePlay
             {"C64", 59.9275f},
             {"NDS", 59.8261f}
         };
-
-
 
         public static readonly string[] BannedButtons =
         {
@@ -191,20 +183,12 @@ namespace BizhawkRemotePlay
         public BizhawkRemotePlay()
         {
             InitializeComponent();
-            RPConfig = LoadConfigFile<RemotePlayConfig>(CONFIG_FILE_PATH);
 
-            systemState = new State(
-                RPConfig.MaxReps,
-                RPConfig.MaxActFrames,
-                RPConfig.PressFrames,
-                RPConfig.HoldFrames,
-                RPConfig.RepetitionDelay,
-                RPConfig.SequenceDelay
-            );
+            SystemState = LoadConfigFile<State>(CONFIG_FILE_PATH);
 
             ReloadUI();
 
-            decoder = new StringDecoder(systemState, RPConfig.RepetitionSplitChar, RPConfig.RepetitionDelayChar, RPConfig.ButtonDurationChar, RPConfig.ButtonSequenceChar);
+            decoder = new StringDecoder(SystemState, SystemState.RepetitionSplitChar, SystemState.RepetitionDelayChar, SystemState.ButtonDurationChar, SystemState.ButtonSequenceChar);
 
             TwitchService ts = new TwitchService(this);
             DiscordService ds = new DiscordService(this);
@@ -218,16 +202,16 @@ namespace BizhawkRemotePlay
 
         private void ReloadUI()
         {
-            nud_maximumActionTime.Value = RPConfig.MaxActFrames;
-            nud_holdFramesDefault.Value = RPConfig.HoldFrames;
-            nud_pressFramesDefault.Value = RPConfig.PressFrames;
-            nud_maximumRepititions.Value = RPConfig.MaxReps;
-            nud_RepDelay.Value = RPConfig.RepetitionDelay;
-            nud_sequenceDelay.Value = RPConfig.SequenceDelay;
-            nud_QueueSize.Value = RPConfig.QueueSize;
+            nud_maximumActionTime.Value = SystemState.MaxFrames;
+            nud_holdFramesDefault.Value = SystemState.HoldFrames;
+            nud_pressFramesDefault.Value = SystemState.PressFrames;
+            nud_maximumRepititions.Value = SystemState.MaxReps;
+            nud_RepDelay.Value = SystemState.RepetitionDelay;
+            nud_sequenceDelay.Value = SystemState.SequenceDelay;
+            nud_QueueSize.Value = SystemState.QueueSize;
 
-            radio_Chaos.Checked = RPConfig.ChaosMode;
-            radio_Queue.Checked = RPConfig.QueueSequences;
+            radio_Chaos.Checked = SystemState.ChaosMode;
+            radio_Queue.Checked = SystemState.QueueSequences;
 
             UIRecalculateTimeLabels();
         }
@@ -238,7 +222,7 @@ namespace BizhawkRemotePlay
         {
             string prefix = "bt";
 
-            if (command.CompareTo(RPConfig.ClearCommand) == 0)
+            if (command.CompareTo(SystemState.ClearCommand) == 0)
             {
                 prefix = "cl";
             }
@@ -322,7 +306,7 @@ namespace BizhawkRemotePlay
 
         private void ClearButtonState()
         {
-            pressedButtons = systemState.JoypadButtons.ToDictionary(o => o, _ => false);
+            pressedButtons = SystemState.JoypadButtons.ToDictionary(o => o, _ => false);
             frameButtonStates.Clear();
             queuedSequences.Clear();
         }
@@ -449,24 +433,24 @@ namespace BizhawkRemotePlay
                 pressedButtons = buttons;
 
                 string[] keys = buttons.Keys.ToArray();
-                systemState.JoypadButtons = new HashSet<string>(keys);
-                systemState.System = gameInfo!.System;
+                SystemState.JoypadButtons = new HashSet<string>(keys);
+                SystemState.System = gameInfo!.System;
 
-                Utility.WriteLine($"Found controls for system {systemState.System}");
-                Utility.WriteLine($"\t{systemState.JoypadButtons}");
+                Utility.WriteLine($"Found controls for system {SystemState.System}");
+                Utility.WriteLine($"\t{SystemState.JoypadButtons}");
 
                 if (!SystemFrameRates.TryGetValue(gameInfo.System, out float systemFPS))
                 {
-                    systemState.SystemFPS = ((gameInfo.Region?.ToLower().CompareTo("PAL") ?? 1) == 0) ? 50 : 60;
+                    SystemState.SystemFPS = ((gameInfo.Region?.ToLower().CompareTo("PAL") ?? 1) == 0) ? 50 : 60;
                 }
                 else
                 {
-                    systemState.SystemFPS = systemFPS;
+                    SystemState.SystemFPS = systemFPS;
                 }
 
                 cbox_Button.Items.AddRange(keys);
 
-                if (RPConfig.Aliases.TryGetValue(systemState.System, out IDictionary<string, string> aliases))
+                if (SystemState.Aliases.TryGetValue(SystemState.System, out IDictionary<string, string> aliases))
                 {
                     foreach (var userAlias in aliases)
                     {
@@ -475,9 +459,9 @@ namespace BizhawkRemotePlay
                     }
                 }
 
-                label_System.Text = systemState.System;
+                label_System.Text = SystemState.System;
                 UIRecalculateTimeLabels();
-                RebuildAliases(systemState.System);
+                SystemState.RebuildAliases();
             }
 
             if (!IsSystemValid)
@@ -545,18 +529,6 @@ namespace BizhawkRemotePlay
 
 
 
-        /// <summary>
-        /// Concatentes the auto-created system aliases, with the user supplied aliases
-        /// </summary>
-        private void RebuildAliases(string system)
-        {
-            RPConfig.Aliases.TryGetValue(system, out IDictionary<string, string> userAliases);
-
-            systemState.RebuildAliases(userAliases);
-        }
-
-
-
         private void UIRecalculateTimeLabels()
         {
 			maximumActionTime_ValueChanged(null!, null!);
@@ -570,65 +542,55 @@ namespace BizhawkRemotePlay
 
         private void maximumActionTime_ValueChanged(object sender, EventArgs e)
         {
-			systemState.MaxFrames = decimal.ToInt32(nud_maximumActionTime.Value);
-			var ms = Utility.FramesToMilliseconds(systemState.MaxFrames, systemState.SystemFPS);
+			SystemState.MaxFrames = decimal.ToInt32(nud_maximumActionTime.Value);
+			var ms = Utility.FramesToMilliseconds(SystemState.MaxFrames, SystemState.SystemFPS);
 			timeLabelMaxActFrames.Text = $"= {ms}ms | {ms / MILLIS_PER_SEC}s";
 
 			nud_holdFramesDefault.Maximum = nud_maximumActionTime.Value;
 			nud_pressFramesDefault.Maximum = nud_maximumActionTime.Value;
-
-			RPConfig.MaxActFrames = systemState.MaxFrames;
 		}
 
 
 
         private void holdFramesDefault_ValueChanged(object sender, EventArgs e)
         {
-			systemState.HoldFrames = decimal.ToInt32(nud_holdFramesDefault.Value);
-			var ms = Utility.FramesToMilliseconds(systemState.HoldFrames, systemState.SystemFPS);
+			SystemState.HoldFrames = decimal.ToInt32(nud_holdFramesDefault.Value);
+			var ms = Utility.FramesToMilliseconds(SystemState.HoldFrames, SystemState.SystemFPS);
 			timeLabelHoldFrames.Text = $"= {ms}ms | {ms / MILLIS_PER_SEC}s";
-
-			RPConfig.HoldFrames = systemState.HoldFrames;
 		}
 
 
 
         private void pressFramesDefault_ValueChanged(object sender, EventArgs e)
         {
-			systemState.PressFrames = decimal.ToInt32(nud_pressFramesDefault.Value);
-			var ms = Utility.FramesToMilliseconds(systemState.PressFrames, systemState.SystemFPS);
+			SystemState.PressFrames = decimal.ToInt32(nud_pressFramesDefault.Value);
+			var ms = Utility.FramesToMilliseconds(SystemState.PressFrames, SystemState.SystemFPS);
 			timeLabelPressFrames.Text = $"= {ms}ms | {ms / MILLIS_PER_SEC}s";
-
-			RPConfig.PressFrames = systemState.PressFrames;
 		}
 
 
 
         private void nud_RepDelay_ValueChanged(object sender, EventArgs e)
         {
-			systemState.DefaultRepetitionDelay = decimal.ToInt32(nud_RepDelay.Value);
-			var ms = Utility.FramesToMilliseconds(systemState.DefaultRepetitionDelay, systemState.SystemFPS);
+			SystemState.RepetitionDelay = decimal.ToInt32(nud_RepDelay.Value);
+			var ms = Utility.FramesToMilliseconds(SystemState.RepetitionDelay, SystemState.SystemFPS);
 			timeLabelRepeitionDelay.Text = $"= {ms}ms | {ms / MILLIS_PER_SEC}s";
-
-			RPConfig.RepetitionDelay = systemState.DefaultRepetitionDelay;
 		}
 
 
 
         private void maximumRepititions_ValueChanged(object sender, EventArgs e)
         {
-			systemState.MaxReps = decimal.ToInt32(nud_maximumRepititions.Value);
-			RPConfig.MaxReps = systemState.MaxReps;
+			SystemState.MaxReps = decimal.ToInt32(nud_maximumRepititions.Value);
 		}
 
 
 
         private void sequenceDelay_ValueChanged(object sender, EventArgs e)
         {
-			systemState.DefaultSequenceDelay = decimal.ToInt32(nud_sequenceDelay.Value);
-			var ms = Utility.FramesToMilliseconds(systemState.DefaultSequenceDelay, systemState.SystemFPS);
+			SystemState.SequenceDelay = decimal.ToInt32(nud_sequenceDelay.Value);
+			var ms = Utility.FramesToMilliseconds(SystemState.SequenceDelay, SystemState.SystemFPS);
 			timeLabelSequenceDelay.Text = $"= {ms}ms | {ms / MILLIS_PER_SEC}s";
-            RPConfig.SequenceDelay = systemState.DefaultSequenceDelay;
         }
 
 
@@ -686,7 +648,7 @@ namespace BizhawkRemotePlay
 		/// </summary>
         private void BizhawkRemotePlay_FormClosing(object sender, FormClosingEventArgs e)
         {
-			SaveConfigFile(CONFIG_FILE_PATH, RPConfig);
+			SaveConfigFile(CONFIG_FILE_PATH, SystemState);
         }
 
 
@@ -702,7 +664,7 @@ namespace BizhawkRemotePlay
             string button = (string)cbox_Button.SelectedItem;
 
             // ensure our selection is a valid button
-            if (!systemState.JoypadButtons.Contains(button))
+            if (!SystemState.JoypadButtons.Contains(button))
             {
                 return;
             }
@@ -710,13 +672,13 @@ namespace BizhawkRemotePlay
             string userText = tbox_ButtonAlias.Text.Trim().Replace(" ", "").ToLower();
 
             // Bail if we conflict with an existing system binding
-            if (systemState.ButtonAliases.ContainsKey(userText))
+            if (SystemState.ButtonAliases.ContainsKey(userText))
             {
                 return;
             }
 
             // bail if we've already defined this user binding
-            if (RPConfig.Aliases.TryGetValue(systemState.System, out IDictionary<string, string> userAliases))
+            if (SystemState.Aliases.TryGetValue(SystemState.System, out IDictionary<string, string> userAliases))
             {
                 if (userAliases.ContainsKey(userText))
                 {
@@ -735,17 +697,17 @@ namespace BizhawkRemotePlay
             }
             else
             {
-                RPConfig.Aliases.Add(systemState.System, new Dictionary<string, string> { { userText, button } });
+                SystemState.Aliases.Add(SystemState.System, new Dictionary<string, string> { { userText, button } });
             }
 
-            RebuildAliases(systemState.System);
+            SystemState.RebuildAliases();
         }
 
 
 
         private void btn_RemoveAlias_Click(object sender, EventArgs e)
         {
-            RPConfig.Aliases.TryGetValue(systemState.System, out IDictionary<string, string> aliases);
+            SystemState.Aliases.TryGetValue(SystemState.System, out IDictionary<string, string> aliases);
 
             foreach (ListViewItem item in list_Aliases.SelectedItems)
             {
@@ -754,19 +716,19 @@ namespace BizhawkRemotePlay
 
                 if ((aliases?.Count ?? 0) <= 0)
                 {
-                    RPConfig.Aliases.Remove(systemState.System);
+                    SystemState.Aliases.Remove(SystemState.System);
                 }
             }
 
-            RebuildAliases(systemState.System);
+            SystemState.RebuildAliases();
         }
 
 
 
         private void nud_QueueSize_ValueChanged(object sender, EventArgs e)
         {
-            RPConfig.QueueSize = (int)nud_QueueSize.Value;
-            while (queuedSequences.Count > RPConfig.QueueSize)
+            SystemState.QueueSize = (int)nud_QueueSize.Value;
+            while (queuedSequences.Count > SystemState.QueueSize)
             {
                 queuedSequences.Dequeue();
             }

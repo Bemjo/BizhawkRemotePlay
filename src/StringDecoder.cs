@@ -121,7 +121,7 @@ namespace BizhawkRemotePlay
         {
             bool success;
             int reps;
-            int repDelay = state.DefaultRepetitionDelay;
+            int repDelay = state.RepetitionDelay;
             var repsAndTimes = repStr.Split(RepetitionDelayChar);
 
             // Parse the whole thing only if we can actually parse a number of reps from the string
@@ -132,7 +132,7 @@ namespace BizhawkRemotePlay
                 {
                     if (!ParseTimings(repsAndTimes[1], out repDelay))
                     {
-                        repDelay = state.DefaultRepetitionDelay;
+                        repDelay = state.RepetitionDelay;
                     }
                 }
             }
@@ -206,7 +206,7 @@ namespace BizhawkRemotePlay
             }
             else
             {
-                rep = new Repetitions(1, state.DefaultRepetitionDelay);
+                rep = new Repetitions(1, state.RepetitionDelay);
             }
 
             // We got hold timings as well

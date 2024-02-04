@@ -30,8 +30,8 @@ namespace BizhawkRemotePlay
             InitializeComponent();
             _player = player;
 
-            checkBox_AutoConnectTwitch.Checked = _player.RPConfig.AutoLoginTwitch;
-            checkBox_AutoConnectDiscord.Checked = _player.RPConfig.AutoLoginDiscord;
+            checkBox_AutoConnectTwitch.Checked = _player.SystemState.AutoLoginTwitch;
+            checkBox_AutoConnectDiscord.Checked = _player.SystemState.AutoLoginDiscord;
 
             foreach (IService service in services)
             {
@@ -40,13 +40,13 @@ namespace BizhawkRemotePlay
                     if (service is TwitchService ts)
                     {
                         SetTwitchService(ts);
-                        textBoxUsername.Text = _player.RPConfig.TwitchUsername;
-                        textBoxOAuth.Text = _player.RPConfig.TwitchToken;
+                        textBoxUsername.Text = _player.SystemState.TwitchUsername;
+                        textBoxOAuth.Text = _player.SystemState.TwitchToken;
                     }
                     else if (service is DiscordService ds)
                     {
                         SetDiscordService(ds);
-                        textBoxDiscordToken.Text = _player.RPConfig.DiscordToken;
+                        textBoxDiscordToken.Text = _player.SystemState.DiscordToken;
                     }
                 }
             }
@@ -58,12 +58,12 @@ namespace BizhawkRemotePlay
         {
             if (_player != null)
             {
-                if (_player.RPConfig.AutoLoginTwitch)
+                if (_player.SystemState.AutoLoginTwitch)
                 {
                     ConnectToTwitch();
                 }
 
-                if (_player.RPConfig.AutoLoginDiscord)
+                if (_player.SystemState.AutoLoginDiscord)
                 {
                     ConnectToDiscord();
                 }
@@ -78,7 +78,7 @@ namespace BizhawkRemotePlay
             twitchService.OnConnected += TwitchService_OnConnected;
             twitchService.OnDisconnected += TwitchService_OnDisconnected;
 
-            foreach (string channel in _player.RPConfig.TwitchChannels)
+            foreach (string channel in _player.SystemState.TwitchChannels)
             {
                 JoinChannel(channel, false);
             }
@@ -126,7 +126,7 @@ namespace BizhawkRemotePlay
             discordService.OnConnected += DiscordService_OnConnected;
             discordService.OnDisconnected += DiscordService_OnDisconnected;
 
-            foreach (string channel in _player.RPConfig.DiscordChannels)
+            foreach (string channel in _player.SystemState.DiscordChannels)
             {
                 Discord_Listen(channel, false);
             }
@@ -280,7 +280,7 @@ namespace BizhawkRemotePlay
 
             if (addToChannels)
             {
-                _player.RPConfig.TwitchChannels.Add(channel);
+                _player.SystemState.TwitchChannels.Add(channel);
             }
         }
 
@@ -304,7 +304,7 @@ namespace BizhawkRemotePlay
 
             listBox_JoinedChannels.Items.Remove(channel);
             twitchService?.LeaveChannel(channel);
-            _player.RPConfig.TwitchChannels.Remove(channel);
+            _player.SystemState.TwitchChannels.Remove(channel);
         }
 
 
@@ -343,7 +343,7 @@ namespace BizhawkRemotePlay
                 ulong id = ulong.Parse(channel);
                 listBox_DiscordChannels.Items.Remove(channel);
                 discordService?.IgnoreChannel(id);
-                _player.RPConfig.DiscordChannels.Remove(channel);
+                _player.SystemState.DiscordChannels.Remove(channel);
             }
             catch
             { }
@@ -373,7 +373,7 @@ namespace BizhawkRemotePlay
 
                     if (addToChannels)
                     {
-                        _player.RPConfig.DiscordChannels.Add(channel);
+                        _player.SystemState.DiscordChannels.Add(channel);
                     }
                 }
             }
@@ -385,14 +385,14 @@ namespace BizhawkRemotePlay
 
         private void checkBox_AutoConnectTwitch_CheckedChanged(object sender, EventArgs e)
         {
-            _player.RPConfig.AutoLoginTwitch = checkBox_AutoConnectTwitch.Checked;
+            _player.SystemState.AutoLoginTwitch = checkBox_AutoConnectTwitch.Checked;
         }
 
 
 
         private void checkBox_AutoConnectDiscord_CheckedChanged(object sender, EventArgs e)
         {
-            _player.RPConfig.AutoLoginDiscord = checkBox_AutoConnectDiscord.Checked;
+            _player.SystemState.AutoLoginDiscord = checkBox_AutoConnectDiscord.Checked;
         }
 
 
@@ -427,21 +427,21 @@ namespace BizhawkRemotePlay
 
         private void textBoxDiscordToken_TextChanged(object sender, EventArgs e)
         {
-            _player.RPConfig.DiscordToken = textBoxDiscordToken.Text;
+            _player.SystemState.DiscordToken = textBoxDiscordToken.Text;
         }
 
 
 
         private void textBoxUsername_TextChanged(object sender, EventArgs e)
         {
-            _player.RPConfig.TwitchUsername = textBoxUsername.Text;
+            _player.SystemState.TwitchUsername = textBoxUsername.Text;
         }
 
 
 
         private void textBoxOAuth_TextChanged(object sender, EventArgs e)
         {
-            _player.RPConfig.TwitchToken = textBoxOAuth.Text;
+            _player.SystemState.TwitchToken = textBoxOAuth.Text;
         }
     }
 }
